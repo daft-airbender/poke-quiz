@@ -318,6 +318,10 @@ button:focus-visible {
   border: 2px solid transparent;
 }
 
+.chip:disabled:not(.is-selected) {
+  opacity: 0.4;
+}
+
 .chip.is-selected {
   border-color: var(--accent);
   background: var(--accent-soft);

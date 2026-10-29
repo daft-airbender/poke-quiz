@@ -13,6 +13,8 @@ export function Home({ modes, generations, initialConfig, onStart }) {
   const [config, setConfig] = useState(initialConfig);
   const [infoMode, setInfoMode] = useState(null); // mode whose info dialog is open
   const update = (changes) => setConfig({ ...config, ...changes });
+  const selectedMode = modes.find((mode) => mode.id === config.mode);
+  const gensLocked = Boolean(selectedMode?.allGenerations);
 
   // Modes arrive in display order; group them under their headings, keeping that order.
   const groups = [];
@@ -49,7 +51,8 @@ export function Home({ modes, generations, initialConfig, onStart }) {
 
       <section class="card stack">
         <h2>Generations</h2>
-        <${GenerationChips} generations=${generations} selected=${config.gens} onChange=${(gens) => update({ gens })} />
+        <${GenerationChips} generations=${generations} selected=${config.gens} locked=${gensLocked} onChange=${(gens) => update({ gens })} />
+        ${gensLocked && html`<p class="muted small">${selectedMode.label} always uses every generation. Picking one would give the region away.</p>`}
       </section>
 
       <section class="card stack">

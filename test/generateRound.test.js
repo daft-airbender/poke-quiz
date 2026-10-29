@@ -202,7 +202,7 @@ test('typed modes: name-text and dex-to-mon expect the name, mon-to-dex the numb
 });
 
 test('generation filter is respected', () => {
-  for (const modeId of ['name-text', 'name-choice', 'type', 'mon-to-dex', 'dex-to-mon', 'mon-to-region', 'region-to-mon']) {
+  for (const modeId of ['name-text', 'name-choice', 'type', 'mon-to-dex', 'dex-to-mon']) {
     for (const q of generateRound({ modeId, count: 30, gens: [1, 3] })) {
       assert.ok([1, 3].includes(byId.get(idFromKey(q.questionKey)).generation));
     }
@@ -239,5 +239,16 @@ test('every mode has a description, an example, and a question count for the inf
     assert.ok(mode.description?.length > 20, mode.id);
     assert.ok(mode.example?.length > 3, mode.id);
     assert.equal(mode.totalQuestions, getMode(mode.id).candidates(ALL_POKEMON).length, mode.id);
+  }
+});
+
+test('region modes ignore the generation filter', () => {
+  assert.deepEqual(listModes().filter((m) => m.allGenerations).map((m) => m.id), ['mon-to-region', 'region-to-mon']);
+  for (const modeId of ['mon-to-region', 'region-to-mon']) {
+    const gens = new Set();
+    for (let i = 0; i < 5; i++) {
+      for (const q of generateRound({ modeId, count: 50, gens: [1] })) gens.add(byId.get(idFromKey(q.questionKey)).generation);
+    }
+    assert.ok(gens.size > 1, `${modeId} stayed in Gen 1`);
   }
 });

@@ -238,7 +238,7 @@ The first three modes (Name it / Type it / Matchup) became the list below. The S
 | `region-to-mon` | Region → Pokémon | `choice` | "Which is from Kanto?" → 4 options with sprite + name (`region-to-mon:25`, one card per Pokémon) | 1,025 |
 
 - **Defender types** in keys are sorted alphabetically. Dual combos come from real Pokémon; abilities (Levitate etc.) are ignored. Matchup examples show a Pokémon with exactly those types.
-- **Regions:** a Pokémon's region is its debut generation's region (Kanto … Paldea), except Wyrdeer, Kleavor, Ursaluna, Basculegion, Sneasler, Overqwil and Enamorus, which are **Hisui** (Gen 8, from Legends: Arceus). Region → Pokémon distractors are from *other* regions within 2 generations of the answer (Hisui counts as Gen 8).
+- **Regions:** a Pokémon's region is its debut generation's region (Kanto … Paldea), except Wyrdeer, Kleavor, Ursaluna, Basculegion, Sneasler, Overqwil and Enamorus, which are **Hisui** (Gen 8, from Legends: Arceus). Region → Pokémon distractors are from *other* regions within 2 generations of the answer (Hisui counts as Gen 8). Both region modes ignore the generation filter (`allGenerations: true`; Home grays out the chips), since filtering to one generation would give the region away.
 - **Free-text names:** compared ignoring case, accents, spaces and punctuation (♀/♂ also accept f/m).
   - Close typo (1 edit for names ≤5 letters, else 2; swapped letters count as one) → "Double-check spelling." and retry. 3 close misses → wrong.
   - Another real Pokémon's name is always wrong, never a typo (e.g. Porygon-Z for Porygon2).
