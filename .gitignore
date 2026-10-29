@@ -1,0 +1,12 @@
+node_modules/
+
+# Secrets: never commit real env files
+.env
+.env.*
+!.env.example
+
+# PokéAPI response cache used while running scripts/fetch-pokemon.js
+.cache/
+
+npm-debug.log*
+.DS_Store
