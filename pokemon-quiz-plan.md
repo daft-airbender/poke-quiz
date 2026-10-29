@@ -211,7 +211,10 @@ More modes are expected beyond the initial set, so modes are pluggable.
 Each question: `{ questionKey, mode, answerType, prompt, sprite?, choices[], answer }`. Multiple choice, 4 options unless noted.
 
 ### Mode registry
-- Each mode is one file in `src/quiz/modes/` exporting `{ id, label, answerType, generate({ count, gens, progress }) }`.
+- Each mode is one file in `src/quiz/modes/` exporting `{ id, label, answerType, candidates(pool), question(candidate, pool, random) }`:
+  - `candidates(pool)` lists every possible question for the selected Pokémon as `{ key, ... }`.
+  - `question(candidate, pool, random)` builds one question (prompt, choices, answer).
+  - Picking which candidates go into a round lives in one shared place (`src/quiz/generateRound.js`), so the weighting below applies to every mode without each mode reimplementing it.
 - `src/quiz/modes/index.js` collects them; `/api/quiz` and `/api/modes` read from the registry. No mode-specific `if/else` in routes.
 - `answerType` tells the frontend which input component to render: `"choice"` (pick one → `MultipleChoice`), `"types"` (pick 1–2 types → `TypePicker`). New answer types get a new component; new modes that reuse an existing answer type need **no frontend changes**.
 - Adding a mode = one server file (+ a component only if it needs a new answer type).

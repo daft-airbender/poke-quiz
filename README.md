@@ -46,6 +46,20 @@ node --env-file=.env.production scripts/create-user.js teddy        # production
 
 Usernames are case-insensitive. A login lasts 14 days from when you log in (not extended by visits), then you log in again. Login is limited to 5 failed attempts per 15 minutes per IP; once limited, even a correct password is refused until the window passes (restarting the server also clears it).
 
+## Quiz modes
+
+Modes are pluggable. Each is one file in `src/quiz/modes/` exporting:
+
+```js
+{ id, label, answerType, candidates(pool), question(candidate, pool, random) }
+```
+
+- `candidates(pool)` lists every possible question (`{ key, ... }`) for the selected Pokémon.
+- `question(...)` builds one: `{ prompt, sprite, choices, answer, ... }`.
+- `answerType` picks the frontend input: `choice` (pick one) or `types` (pick 1–2 types).
+
+To add a mode, create the file and list it in `src/quiz/modes/index.js`. `src/quiz/generateRound.js` picks which candidates go into a round for every mode.
+
 ## Database
 
 Two separate Neon projects, so local testing can't touch real data or use up production's free compute:

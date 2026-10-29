@@ -4,6 +4,7 @@ import cookieSession from 'cookie-session';
 import express from 'express';
 import { requireAuth, SESSION_MAX_AGE_MS } from './middleware/requireAuth.js';
 import { authRouter } from './routes/auth.js';
+import { quizRouter } from './routes/quiz.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -42,6 +43,7 @@ export function createApp({ sessionSecret = process.env.SESSION_SECRET } = {}) {
   // /api/login and /api/me work without a session; everything after requireAuth needs one.
   app.use('/api', authRouter());
   app.use('/api', requireAuth);
+  app.use('/api', quizRouter());
 
   // Unknown API routes (only reachable when logged in).
   app.use('/api', (req, res) => {

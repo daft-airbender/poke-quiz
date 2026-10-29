@@ -1,0 +1,80 @@
+import { after, before, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { sessionCookie, startTestServer } from './helpers.js';
+
+// Route-level checks that don't need a database (validation runs before any query).
+
+let server;
+before(async () => (server = await startTestServer()));
+after(() => server.close());
+
+const get = (path) => fetch(server.baseUrl + path, { headers: { Cookie: sessionCookie() } });
+const post = (path, body) =>
+  fetch(server.baseUrl + path, {
+    method: 'POST',
+    headers: { Cookie: sessionCookie(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+test('GET /api/modes lists modes and generations', async () => {
+  const res = await get('/api/modes');
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.deepEqual(body.modes.map((m) => m.id), ['name', 'type', 'matchup']);
+  assert.deepEqual(body.generations, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+});
+
+test('GET /api/quiz returns a round', async () => {
+  const res = await get('/api/quiz?mode=name&count=5&gens=1,2');
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.mode, 'name');
+  assert.equal(body.questions.length, 5);
+});
+
+test('GET /api/quiz defaults to 10 questions', async () => {
+  const body = await (await get('/api/quiz?mode=matchup')).json();
+  assert.equal(body.questions.length, 10);
+});
+
+test('GET /api/quiz rejects bad parameters with 400', async () => {
+  for (const query of ['', 'mode=nope', 'mode=name&count=0', 'mode=name&count=51', 'mode=name&count=abc', 'mode=name&gens=0', 'mode=name&gens=1,x']) {
+    const res = await get(`/api/quiz?${query}`);
+    assert.equal(res.status, 400, query);
+    assert.ok((await res.json()).error, query);
+  }
+});
+
+test('POST /api/quiz/answer rejects bad bodies with 400', async () => {
+  for (const body of [
+    {},
+    { mode: 'nope', questionKey: 'nope:1', correct: true },
+    { mode: 'name', questionKey: 'type:1', correct: true },
+    { mode: 'name', questionKey: 'name:1', correct: 'yes' },
+    { mode: 'name', questionKey: `name:${'x'.repeat(200)}`, correct: true },
+  ]) {
+    const res = await post('/api/quiz/answer', body);
+    assert.equal(res.status, 400, JSON.stringify(body));
+  }
+});
+
+test('POST /api/quiz/session rejects bad bodies with 400', async () => {
+  const valid = { mode: 'name', total: 10, correct: 7, startedAt: '2026-10-29T10:00:00Z', finishedAt: '2026-10-29T10:05:00Z' };
+  for (const body of [
+    { ...valid, mode: 'nope' },
+    { ...valid, total: 0 },
+    { ...valid, correct: 11 },
+    { ...valid, correct: -1 },
+    { ...valid, startedAt: 'yesterday' },
+    { ...valid, finishedAt: '2026-10-29T09:00:00Z' },
+  ]) {
+    const res = await post('/api/quiz/session', body);
+    assert.equal(res.status, 400, JSON.stringify(body));
+  }
+});
+
+test('a forged session cookie is rejected', async () => {
+  const forged = sessionCookie().replace(/session\.sig=[^;]+/, 'session.sig=bad');
+  const res = await fetch(`${server.baseUrl}/api/modes`, { headers: { Cookie: forged } });
+  assert.equal(res.status, 401);
+});
