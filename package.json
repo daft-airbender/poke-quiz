@@ -11,11 +11,18 @@
     "dev": "node --watch --env-file-if-exists=.env src/server.js",
     "start": "node src/server.js",
     "fetch:pokemon": "node scripts/fetch-pokemon.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --env-file-if-exists=.env scripts/migrate.js",
     "test": "node --test"
   },
   "dependencies": {
+    "drizzle-orm": "0.45.4",
     "express": "5.3.0",
     "htm": "3.1.1",
+    "pg": "8.23.1",
     "preact": "11.1.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "0.31.11"
   }
 }

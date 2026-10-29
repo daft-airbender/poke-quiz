@@ -31,6 +31,19 @@ Health check: `curl http://localhost:3000/healthz` returns `ok`.
 | `npm start` | Start the server (used by Render) |
 | `npm test` | Run tests with Node's built-in test runner |
 | `npm run fetch:pokemon` | Rebuild `data/pokemon.json` from PokéAPI (one-off; responses cached in `.cache/`) |
+| `npm run db:generate` | Generate a SQL migration in `drizzle/` from `src/db/schema.js` (no DB needed) |
+| `npm run db:migrate` | Apply pending migrations (uses `DATABASE_URL_UNPOOLED` if set, else `DATABASE_URL`) |
+
+## Database
+
+Two separate Neon projects, so local testing can't touch real data or use up production's free compute:
+
+- `poke-quiz-dev`: local development, connection strings in `.env`
+- `poke-quiz-prod`: Render only
+
+Both are capped at 0.25 CU compute. `.env` needs the **pooled** string (`-pooler` host) as `DATABASE_URL` and, ideally, the **direct** string as `DATABASE_URL_UNPOOLED` for migrations. Note that Neon's own env-file download names these the other way around.
+
+Schema changes: edit `src/db/schema.js`, run `npm run db:generate`, review and commit the new file in `drizzle/`, then `npm run db:migrate`. Render applies pending migrations automatically on deploy.
 
 ## Data
 
