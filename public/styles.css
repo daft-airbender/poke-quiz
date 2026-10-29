@@ -1,11 +1,39 @@
 :root {
-  --bg: #f6f7fb;
+  --bg: #f3f4f8;
   --text: #1d1f27;
   --muted: #6b7080;
-  --accent: #e3350d;
   --card: #ffffff;
-  --radius: 12px;
+  --border: #dfe2ea;
+  --accent: #e3350d;
+  --accent-text: #ffffff;
+  --accent-soft: #fde7e1;
+  --correct: #1f9d55;
+  --correct-soft: #dcf5e6;
+  --wrong: #d64545;
+  --wrong-soft: #fde2e2;
+  --radius: 14px;
+  --shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+  color-scheme: light;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161c;
+    --text: #eceef3;
+    --muted: #9aa0b0;
+    --card: #1e2129;
+    --border: #2f333e;
+    --accent: #ff5a36;
+    --accent-soft: #3a211b;
+    --correct: #3ccf7a;
+    --correct-soft: #173326;
+    --wrong: #ff6b6b;
+    --wrong-soft: #3b1e1e;
+    --shadow: none;
+    color-scheme: dark;
+  }
 }
 
 * {
@@ -16,36 +44,443 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  -webkit-tap-highlight-color: transparent;
 }
 
 #app {
-  max-width: 480px;
+  max-width: 520px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 12px 16px 40px;
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+h1 {
+  color: var(--accent);
+  font-size: 1.8rem;
+}
+
+h2 {
+  font-size: 1.05rem;
+}
+
+p {
+  margin: 0;
+}
+
+/* Layout */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.center {
+  text-align: center;
+  align-items: center;
 }
 
 .card {
   background: var(--card);
   border-radius: var(--radius);
-  padding: 20px;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
-}
-
-h1 {
-  margin: 0 0 8px;
-  color: var(--accent);
+  padding: 18px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
 }
 
 .muted {
   color: var(--muted);
 }
 
+.small {
+  font-size: 0.88rem;
+}
+
+.error {
+  color: var(--wrong);
+}
+
+/* Header */
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 2px 14px;
+}
+
+.brand {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.user {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* Buttons */
+
 button {
   font: inherit;
-  padding: 12px 16px;
+  color: inherit;
+  cursor: pointer;
   border: 0;
   border-radius: var(--radius);
+  padding: 12px 16px;
+  min-height: 48px;
+  background: none;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.primary {
   background: var(--accent);
-  color: #fff;
-  cursor: pointer;
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.primary:disabled {
+  opacity: 0.5;
+}
+
+.secondary {
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.full {
+  width: 100%;
+}
+
+.large {
+  min-height: 56px;
+  font-size: 1.1rem;
+}
+
+.link {
+  padding: 0;
+  min-height: 0;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* Forms */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.field input {
+  font: inherit;
+  font-weight: 400;
+  color: inherit;
+  /* 16px+ stops iOS from zooming in on focus. */
+  font-size: 1rem;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+/* Home: segmented buttons and generation chips */
+
+.segmented {
+  display: flex;
+  gap: 8px;
+}
+
+.segmented.vertical {
+  flex-direction: column;
+}
+
+.segmented button {
+  flex: 1;
+  background: var(--bg);
+  border: 2px solid transparent;
+  font-weight: 600;
+}
+
+.segmented button.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 2px solid transparent;
+}
+
+.chip.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+/* Quiz */
+
+.quiz-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress-bar > div {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.question {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.sprite-frame {
+  width: 192px;
+  height: 192px;
+  border-radius: 50%;
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+}
+
+.sprite {
+  width: 192px;
+  height: 192px;
+  image-rendering: pixelated;
+}
+
+.prompt {
+  font-size: 1.2rem;
+}
+
+.matchup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.choices {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+/* Matchup has 6 short options: 3 per row. */
+.choices-compact {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.choice {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  font-weight: 600;
+  font-size: 1.05rem;
+  min-height: 54px;
+}
+
+.choice.is-correct {
+  border-color: var(--correct);
+  background: var(--correct-soft);
+  color: var(--text);
+}
+
+.choice.is-wrong {
+  border-color: var(--wrong);
+  background: var(--wrong-soft);
+}
+
+.choice.is-dimmed {
+  opacity: 0.5;
+}
+
+.feedback {
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.feedback.is-correct {
+  background: var(--correct-soft);
+  color: var(--correct);
+}
+
+.feedback.is-wrong {
+  background: var(--wrong-soft);
+  color: var(--text);
+}
+
+/* Type badges and the type picker */
+
+.type-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.type-badges {
+  display: inline-flex;
+  gap: 6px;
+  vertical-align: middle;
+}
+
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.type-option {
+  min-height: 46px;
+  padding: 8px 4px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  border: 3px solid transparent;
+}
+
+.type-option.is-selected {
+  border-color: var(--text);
+  transform: scale(1.04);
+}
+
+.type-option.is-dimmed {
+  opacity: 0.35;
+}
+
+/* Picked but not one of the Pokémon's types. */
+.type-option.is-wrong {
+  border-color: var(--wrong);
+  box-shadow: 0 0 0 2px var(--wrong);
+}
+
+/* Pokémon's type that wasn't picked. */
+.type-option.is-missed {
+  border: 3px dashed var(--correct);
+}
+
+/* Correct pick: keeps its type color (set inline), with a green ring. */
+.type-option.is-correct {
+  border-color: var(--correct);
+  box-shadow: 0 0 0 2px var(--correct);
+}
+
+/* Summary */
+
+.score {
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.missed-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.missed-list li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.missed-list img {
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+/* Loading */
+
+.spinner-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted);
+  padding: 20px 0;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner.large {
+  width: 40px;
+  height: 40px;
+  border-width: 4px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.45);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 10;
+}
+
+.overlay-card {
+  max-width: 340px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
