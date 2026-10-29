@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "node --watch --env-file-if-exists=.env src/server.js",
     "start": "node src/server.js",
+    "fetch:pokemon": "node scripts/fetch-pokemon.js",
     "test": "node --test"
   },
   "dependencies": {
