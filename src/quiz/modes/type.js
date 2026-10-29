@@ -6,6 +6,7 @@ import { TYPES } from '../typeEffectiveness.js';
 export default {
   id: 'type',
   label: 'Type',
+  group: 'Types',
   answerType: 'types',
 
   candidates(pool) {

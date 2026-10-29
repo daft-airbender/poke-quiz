@@ -10,6 +10,7 @@ const MAX_GENERATION_GAP = 2;
 export default {
   id: 'region-to-mon',
   label: 'Region → Pokémon',
+  group: 'Regions',
   answerType: 'choice',
 
   candidates(pool) {

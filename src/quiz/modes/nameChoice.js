@@ -5,6 +5,7 @@ import { sample, shuffle } from '../random.js';
 export default {
   id: 'name-choice',
   label: 'Name (multiple choice)',
+  group: 'Names',
   answerType: 'choice',
 
   candidates(pool) {

@@ -1,5 +1,9 @@
 import { html } from 'htm/preact';
+// Served at /shared/ (see src/app.js); the relative path also resolves on disk, for tests.
+import { normalizeName } from '../shared/nameMatch.js';
 import { MultipleChoice } from './components/MultipleChoice.js';
+import { NumberAnswer } from './components/NumberAnswer.js';
+import { TextAnswer } from './components/TextAnswer.js';
 import { TypeBadges } from './components/TypeBadge.js';
 import { TypePicker } from './components/TypePicker.js';
 
@@ -19,5 +23,16 @@ export const ANSWER_TYPES = {
     // Same set of types, in any order.
     isCorrect: (value, answer) => value.length === answer.length && answer.every((type) => value.includes(type)),
     display: (value) => html`<${TypeBadges} types=${value} />`,
+  },
+  text: {
+    Input: TextAnswer,
+    // Spelling retries happen inside TextAnswer; by the time an answer gets here it's final.
+    isCorrect: (value, answer) => normalizeName(value) === normalizeName(answer),
+    display: (value) => value,
+  },
+  number: {
+    Input: NumberAnswer,
+    isCorrect: (value, answer) => value === answer,
+    display: (value) => `#${String(value).padStart(3, '0')}`,
   },
 };

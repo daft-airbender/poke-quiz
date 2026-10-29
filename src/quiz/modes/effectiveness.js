@@ -27,6 +27,7 @@ function effectivenessMode({ id, label, dual }) {
   return {
     id,
     label,
+    group: 'Types',
     answerType: 'choice',
 
     candidates(pool) {

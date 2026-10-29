@@ -48,16 +48,22 @@ Usernames are case-insensitive. A login lasts 14 days from when you log in (not 
 
 ## Quiz modes
 
+11 modes (see [`_design_docs/modes-v1.md`](_design_docs/modes-v1.md) and the table in the plan): Name (free text / multiple choice), Type, Effectiveness (single / dual), Counters (single / dual), Pokémon → Pokédex #, Pokédex # → Pokémon, Pokémon → Region, Region → Pokémon.
+
 Modes are pluggable. Each is one file in `src/quiz/modes/` exporting:
 
 ```js
-{ id, label, answerType, candidates(pool), question(candidate, pool, random), describe(key) }
+{ id, label, group, answerType, candidates(pool), question(candidate, pool, random), describe(key) }
 ```
 
 - `candidates(pool)` lists every possible question (`{ key, ... }`) for the selected Pokémon.
 - `question(...)` builds one: `{ prompt, sprite, choices, answer, ... }`.
 - `describe(key)` turns a saved question key back into something the progress view can show.
-- `answerType` picks the frontend input: `choice` (pick one) or `types` (pick 1–2 types).
+- `group` is the heading it's listed under on Home.
+- `answerType` picks the frontend input: `choice` (pick one), `types` (pick types; `question.maxSelected`, default 2), `text` (type a Pokémon name), or `number` (Pokédex number).
+- Question keys are permanent card IDs for the planned spaced repetition: don't change a mode's key format once it has history.
+
+Typed names are matched by `shared/nameMatch.js`, which the server and the browser both import (served at `/shared/`): case, accents, spaces and punctuation are ignored; a close typo asks to double-check spelling, up to 3 times; another Pokémon's name is always wrong.
 
 To add a mode, create the file and list it in `src/quiz/modes/index.js`. `src/quiz/generateRound.js` picks which candidates go into a round for every mode.
 

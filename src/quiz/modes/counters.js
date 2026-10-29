@@ -14,6 +14,7 @@ function countersMode({ id, label, dual }) {
   return {
     id,
     label,
+    group: 'Types',
     answerType: 'types',
 
     candidates(pool) {

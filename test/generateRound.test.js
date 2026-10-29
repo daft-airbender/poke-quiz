@@ -12,19 +12,34 @@ const idFromKey = (key) => Number(key.split(':')[1]);
 test('registry lists the modes in order', () => {
   assert.deepEqual(
     listModes().map((m) => m.id),
-    ['name-choice', 'type', 'effectiveness-single', 'effectiveness-dual', 'counters-single', 'counters-dual', 'mon-to-region', 'region-to-mon'],
+    [
+      'name-text',
+      'name-choice',
+      'type',
+      'effectiveness-single',
+      'effectiveness-dual',
+      'counters-single',
+      'counters-dual',
+      'mon-to-dex',
+      'dex-to-mon',
+      'mon-to-region',
+      'region-to-mon',
+    ],
   );
 });
 
 test('card counts per mode (all generations)', () => {
   const counts = Object.fromEntries(listModes().map(({ id }) => [id, getMode(id).candidates(ALL_POKEMON).length]));
   assert.deepEqual(counts, {
+    'name-text': 1025,
     'name-choice': 1025,
     type: 1025,
     'effectiveness-single': 324,
     'effectiveness-dual': 2448,
     'counters-single': 18,
     'counters-dual': 136,
+    'mon-to-dex': 1025,
+    'dex-to-mon': 1025,
     'mon-to-region': 1025,
     'region-to-mon': 1025,
   });
@@ -161,8 +176,33 @@ test('region-to-mon: Hisui questions use Gen 6–9 wrong options, never Hisui', 
   }
 });
 
+test('typed modes: name-text and dex-to-mon expect the name, mon-to-dex the number', () => {
+  for (const q of generateRound({ modeId: 'name-text', count: 30 })) {
+    const pokemon = byId.get(idFromKey(q.questionKey));
+    assert.equal(q.answer, pokemon.name);
+    assert.equal(q.sprite, pokemon.sprite);
+    assert.equal(q.choices, undefined);
+    assert.ok(!q.prompt.includes(pokemon.name));
+    assert.ok(Array.isArray(q.lookAlikes) && !q.lookAlikes.includes(pokemon.name));
+  }
+  for (const q of generateRound({ modeId: 'dex-to-mon', count: 30 })) {
+    const pokemon = byId.get(idFromKey(q.questionKey));
+    assert.equal(q.answer, pokemon.name);
+    assert.equal(q.sprite, undefined, 'no sprite: it would give the answer away');
+    assert.ok(q.prompt.includes(`#${String(pokemon.id).padStart(3, '0')}`));
+  }
+  for (const q of generateRound({ modeId: 'mon-to-dex', count: 30 })) {
+    const pokemon = byId.get(idFromKey(q.questionKey));
+    assert.equal(q.answer, pokemon.id);
+    assert.equal(q.max, 1025);
+    assert.ok(q.prompt.includes(pokemon.name));
+  }
+  const porygon2 = generateRound({ modeId: 'name-text', count: 1025 }).find((q) => q.answer === 'Porygon2');
+  assert.deepEqual([...porygon2.lookAlikes].sort(), ['Porygon', 'Porygon-Z']);
+});
+
 test('generation filter is respected', () => {
-  for (const modeId of ['name-choice', 'type', 'mon-to-region', 'region-to-mon']) {
+  for (const modeId of ['name-text', 'name-choice', 'type', 'mon-to-dex', 'dex-to-mon', 'mon-to-region', 'region-to-mon']) {
     for (const q of generateRound({ modeId, count: 30, gens: [1, 3] })) {
       assert.ok([1, 3].includes(byId.get(idFromKey(q.questionKey)).generation));
     }

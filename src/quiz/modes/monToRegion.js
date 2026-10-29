@@ -4,6 +4,7 @@ import { POKEMON_BY_ID, REGIONS, regionOf } from '../pokemon.js';
 export default {
   id: 'mon-to-region',
   label: 'Pokémon → Region',
+  group: 'Regions',
   answerType: 'choice',
 
   candidates(pool) {

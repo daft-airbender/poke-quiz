@@ -3,7 +3,6 @@ import { html } from 'htm/preact';
 import { api } from '../api.js';
 import { ANSWER_TYPES } from '../answerTypes.js';
 import { Spinner } from '../components/Loader.js';
-import { Segmented } from '../components/Segmented.js';
 import { TypeBadge, TypeBadges } from '../components/TypeBadge.js';
 
 const percent = (correct, total) => (total ? `${Math.round((correct / total) * 100)}%` : '–');
@@ -68,11 +67,21 @@ export function Progress({ onHome }) {
 
       <section class="card stack">
         <h2>Weakest</h2>
-        <${Segmented}
-          options=${summary.modes.map((mode) => ({ value: mode.id, label: mode.label }))}
-          value=${weakMode}
-          onChange=${setWeakMode}
-        />
+        <div class="chips">
+          ${summary.modes.map(
+            (mode) => html`
+              <button
+                key=${mode.id}
+                type="button"
+                class=${`chip ${mode.id === weakMode ? 'is-selected' : ''}`}
+                aria-pressed=${mode.id === weakMode}
+                onClick=${() => setWeakMode(mode.id)}
+              >
+                ${mode.label}${mode.weakest.length > 0 && html` <span class="muted">${mode.weakest.length}</span>`}
+              </button>
+            `,
+          )}
+        </div>
         ${selected.weakest.length === 0
           ? html`<p class="muted">Nothing missed yet in ${selected.label}.</p>`
           : html`<ul class="missed-list">

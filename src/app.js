@@ -29,6 +29,8 @@ export function createApp({ sessionSecret = process.env.SESSION_SECRET } = {}) {
   app.use('/vendor/preact', express.static(path.join(rootDir, 'node_modules/preact')));
   app.use('/vendor/htm', express.static(path.join(rootDir, 'node_modules/htm')));
   app.use(express.static(path.join(rootDir, 'public')));
+  // Plain modules used by both the server and the browser (e.g. name matching).
+  app.use('/shared', express.static(path.join(rootDir, 'shared')));
 
   app.use(express.json());
   app.use(

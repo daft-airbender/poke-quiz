@@ -11,7 +11,7 @@ import { Settings } from './screens/Settings.js';
 import { Summary } from './screens/Summary.js';
 
 // The next round's choices, starting from the saved defaults. The mode isn't a setting.
-const configFrom = (settings, mode = 'name') => ({ mode, gens: settings.gens, count: settings.roundLength });
+const configFrom = (settings, mode) => ({ mode, gens: settings.gens, count: settings.roundLength });
 
 // Root component: checks the session, loads modes and settings, and switches between screens.
 // screen: { name: 'home' } | { name: 'quiz', round } | { name: 'summary', results, saveFailed }
@@ -53,7 +53,8 @@ function App() {
     Promise.all([api('/api/modes'), api('/api/settings')]).then(([modes, saved]) => {
       setCatalog(modes);
       setSettings(saved);
-      setConfig(configFrom(saved));
+      // Start on the first mode in the list.
+      setConfig(configFrom(saved, modes.modes[0].id));
     }, (err) => setStartupError(err.message));
   }, [user]);
 
