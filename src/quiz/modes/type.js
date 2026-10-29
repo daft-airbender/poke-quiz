@@ -7,6 +7,9 @@ export default {
   id: 'type',
   label: 'Type',
   group: 'Types',
+  description:
+    "Shows a Pokémon. Select its type, or both types if it has two. You need every type right; order doesn't matter.",
+  example: 'Gyarados → Water + Flying',
   answerType: 'types',
 
   candidates(pool) {

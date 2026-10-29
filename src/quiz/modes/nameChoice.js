@@ -6,6 +6,9 @@ export default {
   id: 'name-choice',
   label: 'Name (multiple choice)',
   group: 'Names',
+  description:
+    "Shows a Pokémon's sprite. Pick its name from 4 options. The wrong options are from the same generation, so art style won't give it away.",
+  example: 'Sprite of Pikachu → Pikachu, Raichu, Jigglypuff or Clefairy',
   answerType: 'choice',
 
   candidates(pool) {

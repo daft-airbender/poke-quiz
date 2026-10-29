@@ -3,13 +3,9 @@ import { Router } from 'express';
 import { getDb } from '../db/client.js';
 import { progress, quizSessions } from '../db/schema.js';
 import { getMode, listModes } from '../quiz/modes/index.js';
-import { ALL_POKEMON } from '../quiz/pokemon.js';
 
 const WEAKEST_PER_MODE = 10;
 const RECENT_SESSIONS = 10;
-
-// How many distinct questions each mode has across all generations (computed once).
-const totalItems = new Map(listModes().map(({ id }) => [id, getMode(id).candidates(ALL_POKEMON).length]));
 
 export function progressRouter() {
   const router = Router();
@@ -54,9 +50,9 @@ export function progressRouter() {
     ]);
 
     const totalsByMode = new Map(totals.map((row) => [row.mode, row]));
-    const modes = listModes().map((mode) => ({
+    const modes = listModes().map(({ description, example, ...mode }) => ({
       ...mode,
-      totalItems: totalItems.get(mode.id),
+      totalItems: mode.totalQuestions,
       itemsSeen: totalsByMode.get(mode.id)?.itemsSeen ?? 0,
       answers: totalsByMode.get(mode.id)?.answers ?? 0,
       correct: totalsByMode.get(mode.id)?.correct ?? 0,

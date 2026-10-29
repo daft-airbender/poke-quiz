@@ -11,6 +11,9 @@ export default {
   id: 'region-to-mon',
   label: 'Region → Pokémon',
   group: 'Regions',
+  description:
+    'Shows a region. Pick which of 4 Pokémon debuted there. The wrong options come from other regions at most 2 generations away, so they look similar.',
+  example: 'Kanto → Charmander (not Totodile, Mudkip or Chikorita)',
   answerType: 'choice',
 
   candidates(pool) {

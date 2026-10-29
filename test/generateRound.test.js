@@ -233,3 +233,11 @@ test('every mode describes its own question keys for the progress view', () => {
     }
   }
 });
+
+test('every mode has a description, an example, and a question count for the info dialog', () => {
+  for (const mode of listModes()) {
+    assert.ok(mode.description?.length > 20, mode.id);
+    assert.ok(mode.example?.length > 3, mode.id);
+    assert.equal(mode.totalQuestions, getMode(mode.id).candidates(ALL_POKEMON).length, mode.id);
+  }
+});

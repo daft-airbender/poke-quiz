@@ -21,13 +21,15 @@ const typeNames = (types) => types.map(capitalize).join('/');
 
 // "Fire attack vs Grass/Steel — how effective?" One mode for single-type defenders, one for dual.
 // Dual defenders are real type combos from the selected Pokémon, with one of them shown as an example.
-function effectivenessMode({ id, label, dual }) {
+function effectivenessMode({ id, label, dual, description, example }) {
   const scale = dual ? SCALE : SINGLE_SCALE;
 
   return {
     id,
     label,
     group: 'Types',
+    description,
+    example,
     answerType: 'choice',
 
     candidates(pool) {
@@ -65,5 +67,18 @@ function effectivenessMode({ id, label, dual }) {
   };
 }
 
-export const effectivenessSingle = effectivenessMode({ id: 'effectiveness-single', label: 'Effectiveness (single)', dual: false });
-export const effectivenessDual = effectivenessMode({ id: 'effectiveness-dual', label: 'Effectiveness (dual)', dual: true });
+export const effectivenessSingle = effectivenessMode({
+  id: 'effectiveness-single',
+  label: 'Effectiveness (single)',
+  dual: false,
+  description: 'Shows an attacking type and a defending Pokémon with one type. Pick how much damage the attack does: 0×, ½×, 1× or 2×.',
+  example: 'Fire attack vs Grass → 2×',
+});
+export const effectivenessDual = effectivenessMode({
+  id: 'effectiveness-dual',
+  label: 'Effectiveness (dual)',
+  dual: true,
+  description:
+    'Shows an attacking type and a defending Pokémon with two types. Pick the damage multiplier, from 0× to 4×: multiply what the attack does against each type. Only type combos real Pokémon have are used.',
+  example: 'Fire attack vs Grass/Steel → 4× (2× × 2×)',
+});

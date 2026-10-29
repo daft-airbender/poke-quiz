@@ -7,6 +7,9 @@ export default {
   id: 'mon-to-dex',
   label: 'Pokémon → Pokédex #',
   group: 'Pokédex',
+  description:
+    'Shows a Pokémon and its name. Enter its National Pokédex number. Only the exact number counts.',
+  example: 'Pikachu → 25',
   answerType: 'number',
 
   candidates(pool) {

@@ -5,6 +5,9 @@ export default {
   id: 'mon-to-region',
   label: 'Pokémon → Region',
   group: 'Regions',
+  description:
+    'Shows a Pokémon. Pick the region it debuted in, from all 10. The seven Pokémon introduced in Legends: Arceus count as Hisui.',
+  example: 'Pikachu → Kanto · Kleavor → Hisui',
   answerType: 'choice',
 
   candidates(pool) {

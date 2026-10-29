@@ -6,6 +6,9 @@ export default {
   id: 'name-text',
   label: 'Name (free text)',
   group: 'Names',
+  description:
+    "Shows a Pokémon's sprite. Type its name. Capitals, accents, spaces and punctuation don't matter. If you're only a letter or two off, you'll be asked to double-check your spelling, up to 3 tries.",
+  example: 'Sprite of Pikachu → type “pikachu”',
   answerType: 'text',
 
   candidates(pool) {

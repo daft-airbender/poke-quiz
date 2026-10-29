@@ -6,6 +6,9 @@ export default {
   id: 'dex-to-mon',
   label: 'Pokédex # → Pokémon',
   group: 'Pokédex',
+  description:
+    "Shows a National Pokédex number. Type the Pokémon's name, with the same spelling rules as Name (free text).",
+  example: '#025 → type “pikachu”',
   answerType: 'text',
 
   candidates(pool) {
