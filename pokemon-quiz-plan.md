@@ -180,7 +180,7 @@ Every progress query must filter by `user_id` from the session, even though ther
   - On success: set `req.session.userId`.
 - `POST /api/logout`: clears session.
 - `GET /api/me`: returns `{ username }` or 401. Frontend uses this on load to decide login vs quiz screen.
-- Cookie: `httpOnly`, `secure` in production, `sameSite: 'lax'`, 30-day max age, signed with `SESSION_SECRET`.
+- Cookie: `httpOnly`, `secure` in production, `sameSite: 'lax'`, 14-day max age, fixed from login (not rolling), signed with `SESSION_SECRET`.
 - `app.set('trust proxy', 1)` — required on Render so secure cookies and rate-limit IPs work behind its proxy.
 - `requireAuth` middleware on all `/api/*` except `/login`, `/me`, and `/healthz`.
 
@@ -287,7 +287,7 @@ For each project:
 
 Run migrations in the build command (pre-deploy commands aren't available on the free tier). `npm run db:migrate` runs `scripts/migrate.js`, which only needs `drizzle-orm` + `pg` (regular dependencies). It must not depend on `drizzle-kit`: with `NODE_ENV=production`, `npm ci` skips devDependencies.
 
-After first deploy: run `node --env-file=.env.production scripts/create-user.js ted` once **locally** with the production `DATABASE_URL` (no shell on Render's free tier).
+After first deploy: run `node --env-file=.env.production scripts/create-user.js teddy` once **locally** with the production `DATABASE_URL` (no shell on Render's free tier).
 
 ### Free-tier realities (don't "fix" these with paid features)
 - Render free service sleeps after ~15 min idle; first request is slow.

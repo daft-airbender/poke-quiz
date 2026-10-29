@@ -4,7 +4,7 @@ import { rateLimit } from 'express-rate-limit';
 import { normalizeUsername, verifyPassword } from '../auth/passwords.js';
 import { getDb } from '../db/client.js';
 import { users } from '../db/schema.js';
-import { requireAuth } from '../middleware/requireAuth.js';
+import { requireAuth, sessionUserId } from '../middleware/requireAuth.js';
 
 // Generous enough for real usernames/passwords, small enough to reject junk cheaply.
 const MAX_FIELD_LENGTH = 200;
@@ -42,6 +42,7 @@ export function authRouter() {
     }
 
     req.session.userId = user.id;
+    req.session.loginAt = Date.now();
     res.json({ username: user.username });
   });
 
@@ -52,7 +53,7 @@ export function authRouter() {
 
   // Lets the frontend decide between the login screen and the app on page load.
   router.get('/me', async (req, res) => {
-    const userId = req.session?.userId;
+    const userId = sessionUserId(req);
     if (!userId) return res.status(401).json({ error: 'Not logged in' });
 
     const [user] = await getDb()

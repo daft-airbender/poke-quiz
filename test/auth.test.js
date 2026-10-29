@@ -2,7 +2,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../src/app.js';
 import { normalizeUsername, verifyPassword } from '../src/auth/passwords.js';
-import { requireAuth } from '../src/middleware/requireAuth.js';
+import { requireAuth, sessionUserId } from '../src/middleware/requireAuth.js';
 
 // These tests don't touch the database: they cover everything that's decided before a query.
 
@@ -59,12 +59,23 @@ test('login rejects missing or malformed fields with 400', async () => {
   }
 });
 
-test('requireAuth sets req.userId from the session', () => {
-  const req = { session: { userId: 7 } };
+test('requireAuth sets req.userId from a fresh session', () => {
+  const req = { session: { userId: 7, loginAt: Date.now() } };
   let called = false;
   requireAuth(req, {}, () => (called = true));
   assert.equal(called, true);
   assert.equal(req.userId, 7);
+});
+
+test('sessions expire 14 days after login, even if the cookie is still sent', () => {
+  const day = 24 * 60 * 60 * 1000;
+  assert.equal(sessionUserId({ session: { userId: 7, loginAt: Date.now() - 13 * day } }), 7);
+
+  const expired = { session: { userId: 7, loginAt: Date.now() - 15 * day } };
+  assert.equal(sessionUserId(expired), null);
+  assert.equal(expired.session, null, 'expired session is cleared');
+
+  assert.equal(sessionUserId({ session: { userId: 7 } }), null, 'session without loginAt is rejected');
 });
 
 test('usernames are case-insensitive and trimmed', () => {

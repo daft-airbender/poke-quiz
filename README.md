@@ -40,11 +40,11 @@ Health check: `curl http://localhost:3000/healthz` returns `ok`.
 There is no signup route. Logins are created only with `scripts/create-user.js`:
 
 ```sh
-npm run create-user ted                                            # dev (.env)
-node --env-file=.env.production scripts/create-user.js ted          # production
+npm run create-user teddy                                          # dev (.env)
+node --env-file=.env.production scripts/create-user.js teddy        # production
 ```
 
-Usernames are case-insensitive. Login is limited to 5 failed attempts per 15 minutes per IP; once limited, even a correct password is refused until the window passes (restarting the server also clears it).
+Usernames are case-insensitive. A login lasts 14 days from when you log in (not extended by visits), then you log in again. Login is limited to 5 failed attempts per 15 minutes per IP; once limited, even a correct password is refused until the window passes (restarting the server also clears it).
 
 ## Database
 

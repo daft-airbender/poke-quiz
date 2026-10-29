@@ -2,12 +2,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import cookieSession from 'cookie-session';
 import express from 'express';
-import { requireAuth } from './middleware/requireAuth.js';
+import { requireAuth, SESSION_MAX_AGE_MS } from './middleware/requireAuth.js';
 import { authRouter } from './routes/auth.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 // Builds the Express app without starting it, so tests can run it on a random port.
 export function createApp({ sessionSecret = process.env.SESSION_SECRET } = {}) {
@@ -34,7 +32,7 @@ export function createApp({ sessionSecret = process.env.SESSION_SECRET } = {}) {
     cookieSession({
       name: 'session',
       keys: [sessionSecret],
-      maxAge: THIRTY_DAYS_MS,
+      maxAge: SESSION_MAX_AGE_MS,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
