@@ -320,6 +320,19 @@ button:focus-visible {
   min-height: 54px;
 }
 
+.choice.with-sprite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px 10px;
+  font-size: 0.95rem;
+}
+
+.choice.with-sprite img {
+  image-rendering: pixelated;
+}
+
 .choice.is-correct {
   border-color: var(--correct);
   background: var(--correct-soft);
@@ -364,6 +377,7 @@ button:focus-visible {
 
 .type-badges {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 6px;
   vertical-align: middle;
 }

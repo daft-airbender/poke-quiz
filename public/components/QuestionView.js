@@ -1,7 +1,7 @@
 import { html } from 'htm/preact';
 import { TypeBadge, TypeBadges } from './TypeBadge.js';
 
-// Sprite and prompt for any question. Matchup questions also show the types as badges.
+// Sprite and prompt for any question. Matchup-style questions also show the types as badges.
 // The sprite's alt text is generic on purpose: the Pokémon's name would give away "Name it" answers.
 export function QuestionView({ question }) {
   const { sprite, prompt, attackType, defenderTypes, example } = question;
@@ -14,11 +14,10 @@ export function QuestionView({ question }) {
           <img class="sprite" src=${sprite} alt="Pokémon sprite" width="192" height="192" />
         </div>
       `}
-      ${attackType &&
+      ${defenderTypes &&
       html`
         <div class="matchup-row">
-          <${TypeBadge} type=${attackType} />
-          <span class="muted">vs</span>
+          ${attackType && html`<${TypeBadge} type=${attackType} /><span class="muted">vs</span>`}
           <${TypeBadges} types=${defenderTypes} />
         </div>
       `}

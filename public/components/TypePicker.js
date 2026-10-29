@@ -2,11 +2,13 @@ import { useState } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { TYPE_COLORS, typeLabel, typeTextColor } from '../types.js';
 
-const MAX_SELECTED = 2;
+// A Pokémon has at most 2 types; modes like Counters raise the limit via question.maxSelected.
+const DEFAULT_MAX_SELECTED = 2;
 
-// Answer input for answerType "types": select 1 or 2 types, then submit.
+// Answer input for answerType "types": select types, then submit. Correct only if the set matches exactly.
 // After answering: correct types are marked green, wrong picks red, and missed ones outlined.
-export function TypePicker({ choices, answer, response, onSubmit }) {
+export function TypePicker({ question, choices, answer, response, onSubmit }) {
+  const MAX_SELECTED = question.maxSelected ?? DEFAULT_MAX_SELECTED;
   const [selected, setSelected] = useState([]);
   const answered = response !== null;
   const picked = answered ? response.value : selected;

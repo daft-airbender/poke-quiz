@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateRound } from '../src/quiz/generateRound.js';
 import { getMode, listModes } from '../src/quiz/modes/index.js';
-import { ALL_POKEMON } from '../src/quiz/pokemon.js';
+import { ALL_POKEMON, REGIONS, regionOf } from '../src/quiz/pokemon.js';
 import { multiplier, TYPES } from '../src/quiz/typeEffectiveness.js';
 
 const byName = new Map(ALL_POKEMON.map((p) => [p.name, p]));
@@ -12,7 +12,7 @@ const idFromKey = (key) => Number(key.split(':')[1]);
 test('registry lists the modes in order', () => {
   assert.deepEqual(
     listModes().map((m) => m.id),
-    ['name-choice', 'type', 'effectiveness-single', 'effectiveness-dual'],
+    ['name-choice', 'type', 'effectiveness-single', 'effectiveness-dual', 'counters-single', 'counters-dual', 'mon-to-region', 'region-to-mon'],
   );
 });
 
@@ -23,6 +23,10 @@ test('card counts per mode (all generations)', () => {
     type: 1025,
     'effectiveness-single': 324,
     'effectiveness-dual': 2448,
+    'counters-single': 18,
+    'counters-dual': 136,
+    'mon-to-region': 1025,
+    'region-to-mon': 1025,
   });
 });
 
@@ -92,8 +96,73 @@ test('effectiveness-dual: real dual combos, 6 choices, sorted key', () => {
   }
 });
 
+test('counters: answer is every attack type at 2× or more, in chart order, with no pick limit', () => {
+  for (const modeId of ['counters-single', 'counters-dual']) {
+    for (const q of generateRound({ modeId, count: 18 })) {
+      assert.equal(q.defenderTypes.length, modeId === 'counters-single' ? 1 : 2);
+      assert.deepEqual(q.answer, TYPES.filter((t) => multiplier(t, q.defenderTypes) >= 2));
+      assert.ok(q.answer.length >= 1);
+      assert.equal(q.maxSelected, 18);
+      assert.deepEqual(q.choices, TYPES);
+    }
+  }
+  const grassSteel = getMode('counters-dual').describe('counters-dual:grass/steel');
+  assert.deepEqual(grassSteel.answer, ['fire', 'fighting'], 'Fire is 4×, Fighting 2×');
+  assert.deepEqual(getMode('counters-single').describe('counters-single:grass').answer, ['fire', 'poison', 'flying', 'bug', 'ice'].sort((a, b) => TYPES.indexOf(a) - TYPES.indexOf(b)));
+});
+
+test('regions: debut generation, except the seven Hisui Pokémon', () => {
+  assert.equal(regionOf(byName.get('Pikachu')), 'Kanto');
+  assert.equal(regionOf(byName.get('Grookey')), 'Galar');
+  assert.equal(regionOf(byName.get('Meltan')), 'Alola');
+  assert.equal(regionOf(byName.get('Sprigatito')), 'Paldea');
+  const hisui = ALL_POKEMON.filter((p) => regionOf(p) === 'Hisui').map((p) => p.name);
+  assert.deepEqual(hisui, ['Wyrdeer', 'Kleavor', 'Ursaluna', 'Basculegion', 'Sneasler', 'Overqwil', 'Enamorus']);
+  assert.equal(REGIONS.length, 10);
+  assert.ok(ALL_POKEMON.every((p) => REGIONS.includes(regionOf(p))));
+});
+
+test('mon-to-region: all 10 regions in order, answer is the debut region', () => {
+  for (const q of generateRound({ modeId: 'mon-to-region', count: 50 })) {
+    const pokemon = byId.get(idFromKey(q.questionKey));
+    assert.deepEqual(q.choices, REGIONS);
+    assert.equal(q.answer, regionOf(pokemon));
+    assert.ok(q.prompt.includes(pokemon.name));
+  }
+});
+
+test('region-to-mon: 4 options with sprites, wrong ones from other regions within 2 generations', () => {
+  for (const q of generateRound({ modeId: 'region-to-mon', count: 200 })) {
+    const pokemon = byId.get(idFromKey(q.questionKey));
+    const region = regionOf(pokemon);
+    assert.equal(q.answer, pokemon.name);
+    assert.ok(q.prompt.includes(region));
+    assert.equal(q.sprite, undefined, 'no sprite: it would give the answer away');
+    assert.equal(new Set(q.choices).size, 4);
+    assert.ok(q.choices.includes(q.answer));
+    assert.deepEqual(Object.keys(q.choiceSprites).sort(), [...q.choices].sort());
+    for (const name of q.choices.filter((c) => c !== q.answer)) {
+      const other = byName.get(name);
+      assert.notEqual(regionOf(other), region, `${name} is also from ${region}`);
+      assert.ok(Math.abs(other.generation - pokemon.generation) <= 2, `${name} is too far from ${pokemon.name}`);
+    }
+  }
+});
+
+test('region-to-mon: Hisui questions use Gen 6–9 wrong options, never Hisui', () => {
+  const kleavor = byName.get('Kleavor');
+  const mode = getMode('region-to-mon');
+  for (let i = 0; i < 50; i++) {
+    const q = mode.question({ pokemon: kleavor }, ALL_POKEMON, Math.random);
+    assert.equal(q.prompt, 'Which of these is from Hisui?');
+    for (const name of q.choices.filter((c) => c !== 'Kleavor')) {
+      assert.ok(byName.get(name).generation >= 6 && regionOf(byName.get(name)) !== 'Hisui', name);
+    }
+  }
+});
+
 test('generation filter is respected', () => {
-  for (const modeId of ['name-choice', 'type']) {
+  for (const modeId of ['name-choice', 'type', 'mon-to-region', 'region-to-mon']) {
     for (const q of generateRound({ modeId, count: 30, gens: [1, 3] })) {
       assert.ok([1, 3].includes(byId.get(idFromKey(q.questionKey)).generation));
     }

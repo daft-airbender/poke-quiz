@@ -52,10 +52,12 @@ export function Quiz({ config, autoAdvance, onFinish, onQuit }) {
     return () => clearTimeout(timer);
   }, [response]);
 
-  // Preload the next sprite so it appears instantly.
+  // Preload the next question's images so they appear instantly.
   useEffect(() => {
     const next = questions?.[index + 1];
-    if (next?.sprite) new Image().src = next.sprite;
+    for (const src of [next?.sprite, ...Object.values(next?.choiceSprites ?? {})]) {
+      if (src) new Image().src = src;
+    }
   }, [questions, index]);
 
   if (loadError) {
@@ -128,6 +130,7 @@ export function Quiz({ config, autoAdvance, onFinish, onQuit }) {
         <${QuestionView} question=${question} />
         <${answerType.Input}
           key=${question.questionKey}
+          question=${question}
           choices=${question.choices}
           answer=${question.answer}
           response=${response}

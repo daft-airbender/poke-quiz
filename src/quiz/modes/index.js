@@ -1,12 +1,24 @@
+import { countersDual, countersSingle } from './counters.js';
 import { effectivenessDual, effectivenessSingle } from './effectiveness.js';
+import monToRegion from './monToRegion.js';
 import nameChoice from './nameChoice.js';
+import regionToMon from './regionToMon.js';
 import type from './type.js';
 
 // Mode registry. To add a mode, create a file in this folder and list it here.
 // Each mode: { id, label, answerType, candidates(pool), question(candidate, pool, random), describe(key) }
 //   describe(key) -> { title, sprite?, attackType?, defenderTypes?, answer? } for the progress view,
 //   or null for a key it doesn't recognize.
-const MODES = [nameChoice, type, effectivenessSingle, effectivenessDual];
+const MODES = [
+  nameChoice,
+  type,
+  effectivenessSingle,
+  effectivenessDual,
+  countersSingle,
+  countersDual,
+  monToRegion,
+  regionToMon,
+];
 
 const modesById = new Map(MODES.map((mode) => [mode.id, mode]));
 
