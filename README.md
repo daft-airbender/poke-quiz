@@ -33,6 +33,18 @@ Health check: `curl http://localhost:3000/healthz` returns `ok`.
 | `npm run fetch:pokemon` | Rebuild `data/pokemon.json` from PokéAPI (one-off; responses cached in `.cache/`) |
 | `npm run db:generate` | Generate a SQL migration in `drizzle/` from `src/db/schema.js` (no DB needed) |
 | `npm run db:migrate` | Apply pending migrations (uses `DATABASE_URL_UNPOOLED` if set, else `DATABASE_URL`) |
+| `npm run create-user <name>` | Create a login in the dev database (prompts for the password, hidden) |
+
+## Accounts
+
+There is no signup route. Logins are created only with `scripts/create-user.js`:
+
+```sh
+npm run create-user ted                                            # dev (.env)
+node --env-file=.env.production scripts/create-user.js ted          # production
+```
+
+Usernames are case-insensitive. Login is limited to 5 failed attempts per 15 minutes per IP; once limited, even a correct password is refused until the window passes (restarting the server also clears it).
 
 ## Database
 

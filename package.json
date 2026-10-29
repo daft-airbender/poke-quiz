@@ -13,11 +13,15 @@
     "fetch:pokemon": "node scripts/fetch-pokemon.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env scripts/migrate.js",
+    "create-user": "node --env-file=.env scripts/create-user.js",
     "test": "node --test"
   },
   "dependencies": {
+    "bcrypt": "6.0.0",
+    "cookie-session": "2.1.1",
     "drizzle-orm": "0.45.4",
     "express": "5.3.0",
+    "express-rate-limit": "8.7.2",
     "htm": "3.1.1",
     "pg": "8.23.1",
     "preact": "11.1.0"

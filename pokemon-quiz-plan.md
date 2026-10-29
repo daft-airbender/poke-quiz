@@ -317,6 +317,7 @@ Work through these in order; stop after each and summarize what was done.
 5. **Quiz API:** mode registry + `name`, `type`, `matchup` modes; `/api/modes`, `/api/quiz`, `/api/quiz/answer`, `/api/quiz/session`.
 6. **Frontend:** login → home → quiz → summary, `MultipleChoice` + `TypePicker` components, wake-up loader.
 7. **Progress & settings:** weighting, `/api/progress/summary`, progress view; `/api/settings` + settings screen.
+   - **Local testing checkpoint:** stop here. I play-test the full MVP locally (all screens and modes, progress, settings) against `poke-quiz-dev`, and we fix what I find before deploying.
 8. **Deploy:** `render.yaml`, deploy notes in README, verify end to end on phone + laptop.
 9. **(v1.1)** `best-attack` mode, then further modes via the registry.
 
