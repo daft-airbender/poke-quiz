@@ -1,4 +1,4 @@
-import { ALL_POKEMON } from '../pokemon.js';
+import { ALL_POKEMON, POKEMON_BY_ID } from '../pokemon.js';
 import { sample, shuffle } from '../random.js';
 
 // Show a sprite, pick the name from 4 options.
@@ -24,5 +24,10 @@ export default {
       choices: shuffle([pokemon.name, ...distractors], random),
       answer: pokemon.name,
     };
+  },
+
+  describe(key) {
+    const pokemon = POKEMON_BY_ID.get(Number(key.split(':')[1]));
+    return pokemon ? { title: pokemon.name, sprite: pokemon.sprite } : null;
   },
 };

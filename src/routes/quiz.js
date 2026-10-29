@@ -1,19 +1,15 @@
-import { sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { getDb } from '../db/client.js';
 import { progress, quizSessions } from '../db/schema.js';
 import { generateRound } from '../quiz/generateRound.js';
 import { getMode, listModes } from '../quiz/modes/index.js';
 import { GENERATIONS } from '../quiz/pokemon.js';
+import { badRequest } from './errors.js';
 
 const DEFAULT_COUNT = 10;
 const MAX_COUNT = 50;
 const MAX_KEY_LENGTH = 120;
-
-// Express 5 turns a thrown error with a `status` into that HTTP response (see app.js).
-function badRequest(message) {
-  return Object.assign(new Error(message), { status: 400 });
-}
 
 function parseCount(value) {
   if (value === undefined) return DEFAULT_COUNT;
@@ -53,12 +49,28 @@ export function quizRouter() {
     res.json({ modes: listModes(), generations: GENERATIONS });
   });
 
-  router.get('/quiz', (req, res) => {
+  router.get('/quiz', async (req, res) => {
     const mode = parseMode(req.query.mode);
+    const count = parseCount(req.query.count);
+    const gens = parseGens(req.query.gens);
+
+    // This mode's history, so the round favors new and weak questions.
+    const records = await getDb()
+      .select({
+        questionKey: progress.questionKey,
+        timesSeen: progress.timesSeen,
+        timesCorrect: progress.timesCorrect,
+        streak: progress.streak,
+        lastSeenAt: progress.lastSeenAt,
+      })
+      .from(progress)
+      .where(and(eq(progress.userId, req.userId), eq(progress.mode, mode.id)));
+
     const questions = generateRound({
       modeId: mode.id,
-      count: parseCount(req.query.count),
-      gens: parseGens(req.query.gens),
+      count,
+      gens,
+      progress: new Map(records.map((record) => [record.questionKey, record])),
     });
     res.json({ mode: mode.id, questions });
   });

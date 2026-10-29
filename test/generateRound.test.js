@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateRound } from '../src/quiz/generateRound.js';
-import { listModes } from '../src/quiz/modes/index.js';
+import { getMode, listModes } from '../src/quiz/modes/index.js';
 import { ALL_POKEMON } from '../src/quiz/pokemon.js';
 import { multiplier, TYPES } from '../src/quiz/typeEffectiveness.js';
 
@@ -81,4 +81,15 @@ test('generation filter is respected', () => {
 
 test('unknown mode throws', () => {
   assert.throws(() => generateRound({ modeId: 'nope', count: 5 }), /Unknown mode/);
+});
+
+test('every mode describes its own question keys for the progress view', () => {
+  for (const { id } of listModes()) {
+    for (const q of generateRound({ modeId: id, count: 10 })) {
+      const described = getMode(id).describe(q.questionKey);
+      assert.ok(described?.title, q.questionKey);
+      if (q.answerType === 'types' || id === 'matchup') assert.deepEqual(described.answer, q.answer, q.questionKey);
+    }
+    assert.equal(getMode(id).describe(`${id}:nonsense>x`), null, id);
+  }
 });

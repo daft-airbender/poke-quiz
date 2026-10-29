@@ -18,3 +18,15 @@ export function sample(items, n, random = Math.random) {
 export function pick(items, random = Math.random) {
   return items[Math.floor(random() * items.length)];
 }
+
+// Up to n distinct items, each picked with probability proportional to weightOf(item)
+// (Efraimidis–Spirakis: sort by random^(1/weight)). Weights must be positive.
+// Returned in random order, so heavily weighted items don't all come first.
+export function weightedSample(items, n, weightOf, random = Math.random) {
+  const chosen = items
+    .map((item) => ({ item, rank: random() ** (1 / weightOf(item)) }))
+    .sort((a, b) => b.rank - a.rank)
+    .slice(0, n)
+    .map(({ item }) => item);
+  return shuffle(chosen, random);
+}

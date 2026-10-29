@@ -3,18 +3,20 @@ import assert from 'node:assert/strict';
 import { sessionCookie, startTestServer } from './helpers.js';
 
 // Route-level checks that don't need a database (validation runs before any query).
+// Successful rounds, progress, and settings are covered against the dev database by hand.
 
 let server;
 before(async () => (server = await startTestServer()));
 after(() => server.close());
 
 const get = (path) => fetch(server.baseUrl + path, { headers: { Cookie: sessionCookie() } });
-const post = (path, body) =>
+const send = (method, path, body) =>
   fetch(server.baseUrl + path, {
-    method: 'POST',
+    method,
     headers: { Cookie: sessionCookie(), 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+const post = (path, body) => send('POST', path, body);
 
 test('GET /api/modes lists modes and generations', async () => {
   const res = await get('/api/modes');
@@ -22,19 +24,6 @@ test('GET /api/modes lists modes and generations', async () => {
   const body = await res.json();
   assert.deepEqual(body.modes.map((m) => m.id), ['name', 'type', 'matchup']);
   assert.deepEqual(body.generations, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
-});
-
-test('GET /api/quiz returns a round', async () => {
-  const res = await get('/api/quiz?mode=name&count=5&gens=1,2');
-  assert.equal(res.status, 200);
-  const body = await res.json();
-  assert.equal(body.mode, 'name');
-  assert.equal(body.questions.length, 5);
-});
-
-test('GET /api/quiz defaults to 10 questions', async () => {
-  const body = await (await get('/api/quiz?mode=matchup')).json();
-  assert.equal(body.questions.length, 10);
 });
 
 test('GET /api/quiz rejects bad parameters with 400', async () => {
@@ -70,6 +59,20 @@ test('POST /api/quiz/session rejects bad bodies with 400', async () => {
   ]) {
     const res = await post('/api/quiz/session', body);
     assert.equal(res.status, 400, JSON.stringify(body));
+  }
+});
+
+test('PUT /api/settings rejects bad values with 400', async () => {
+  for (const body of [[], { roundLength: 15 }, { roundLength: '10' }, { gens: [0] }, { gens: [1, 1] }, { gens: '1' }, { autoAdvance: 'yes' }]) {
+    const res = await send('PUT', '/api/settings', body);
+    assert.equal(res.status, 400, JSON.stringify(body));
+  }
+});
+
+test('progress and settings routes require a login', async () => {
+  for (const [method, path] of [['GET', '/api/progress/summary'], ['GET', '/api/settings'], ['PUT', '/api/settings']]) {
+    const res = await fetch(server.baseUrl + path, { method });
+    assert.equal(res.status, 401, path);
   }
 });
 

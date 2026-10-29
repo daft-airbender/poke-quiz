@@ -1,80 +1,41 @@
 import { useState } from 'preact/hooks';
 import { html } from 'htm/preact';
+import { GenerationChips } from '../components/GenerationChips.js';
+import { Segmented } from '../components/Segmented.js';
 
-const ROUND_LENGTHS = [10, 20, 30];
+export const ROUND_LENGTHS = [10, 20, 30];
 
 // Mode picker, generation filter, round length, Start.
 // config: { mode, gens, count }; gens = [] means all generations.
+// Generations and length start from Settings; changes here last until the page is reloaded.
 export function Home({ modes, generations, initialConfig, onStart }) {
   const [config, setConfig] = useState(initialConfig);
   const update = (changes) => setConfig({ ...config, ...changes });
-
-  function toggleGen(gen) {
-    const gens = config.gens.includes(gen) ? config.gens.filter((g) => g !== gen) : [...config.gens, gen].sort((a, b) => a - b);
-    // Selecting every generation is the same as "All".
-    update({ gens: gens.length === generations.length ? [] : gens });
-  }
 
   return html`
     <main class="stack">
       <section class="card stack">
         <h2>Mode</h2>
-        <div class="segmented vertical">
-          ${modes.map(
-            (mode) => html`
-              <button
-                key=${mode.id}
-                type="button"
-                class=${config.mode === mode.id ? 'is-selected' : ''}
-                aria-pressed=${config.mode === mode.id}
-                onClick=${() => update({ mode: mode.id })}
-              >
-                ${mode.label}
-              </button>
-            `,
-          )}
-        </div>
+        <${Segmented}
+          vertical
+          options=${modes.map((mode) => ({ value: mode.id, label: mode.label }))}
+          value=${config.mode}
+          onChange=${(mode) => update({ mode })}
+        />
       </section>
 
       <section class="card stack">
         <h2>Generations</h2>
-        <div class="chips">
-          <button type="button" class=${`chip ${config.gens.length === 0 ? 'is-selected' : ''}`} onClick=${() => update({ gens: [] })}>
-            All
-          </button>
-          ${generations.map(
-            (gen) => html`
-              <button
-                key=${gen}
-                type="button"
-                class=${`chip ${config.gens.includes(gen) ? 'is-selected' : ''}`}
-                aria-pressed=${config.gens.includes(gen)}
-                onClick=${() => toggleGen(gen)}
-              >
-                Gen ${gen}
-              </button>
-            `,
-          )}
-        </div>
+        <${GenerationChips} generations=${generations} selected=${config.gens} onChange=${(gens) => update({ gens })} />
       </section>
 
       <section class="card stack">
         <h2>Round length</h2>
-        <div class="segmented">
-          ${ROUND_LENGTHS.map(
-            (count) => html`
-              <button
-                key=${count}
-                type="button"
-                class=${config.count === count ? 'is-selected' : ''}
-                aria-pressed=${config.count === count}
-                onClick=${() => update({ count })}
-              >
-                ${count}
-              </button>
-            `,
-          )}
-        </div>
+        <${Segmented}
+          options=${ROUND_LENGTHS.map((count) => ({ value: count, label: String(count) }))}
+          value=${config.count}
+          onChange=${(count) => update({ count })}
+        />
       </section>
 
       <button type="button" class="primary full large" onClick=${() => onStart(config)}>Start</button>

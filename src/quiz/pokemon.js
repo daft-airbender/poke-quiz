@@ -2,6 +2,8 @@ import pokemon from '../../data/pokemon.json' with { type: 'json' };
 
 export const ALL_POKEMON = pokemon;
 
+export const POKEMON_BY_ID = new Map(pokemon.map((p) => [p.id, p]));
+
 export const GENERATIONS = [...new Set(pokemon.map((p) => p.generation))].sort((a, b) => a - b);
 
 // Pokémon from the given generations; all of them when gens is empty.

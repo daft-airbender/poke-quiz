@@ -5,23 +5,33 @@ import { api, onSlowChange, onUnauthorized } from './api.js';
 import { Spinner, WakeUpOverlay } from './components/Loader.js';
 import { Home } from './screens/Home.js';
 import { Login } from './screens/Login.js';
+import { Progress } from './screens/Progress.js';
 import { Quiz } from './screens/Quiz.js';
+import { Settings } from './screens/Settings.js';
 import { Summary } from './screens/Summary.js';
 
-const DEFAULT_CONFIG = { mode: 'name', gens: [], count: 10 };
+// The next round's choices, starting from the saved defaults. The mode isn't a setting.
+const configFrom = (settings, mode = 'name') => ({ mode, gens: settings.gens, count: settings.roundLength });
 
-// Root component: checks the session, loads modes, and switches between screens.
+// Root component: checks the session, loads modes and settings, and switches between screens.
 // screen: { name: 'home' } | { name: 'quiz', round } | { name: 'summary', results, saveFailed }
+//       | { name: 'progress' } | { name: 'settings' }
 function App() {
   const [user, setUser] = useState(undefined); // undefined = still checking, null = logged out
   const [catalog, setCatalog] = useState(null); // { modes, generations } from /api/modes
-  const [config, setConfig] = useState(DEFAULT_CONFIG);
+  const [settings, setSettings] = useState(null); // from /api/settings, reloaded on every login
+  const [config, setConfig] = useState(null);
   const [screen, setScreen] = useState({ name: 'home' });
   const [waking, setWaking] = useState(false);
   const [startupError, setStartupError] = useState('');
 
   useEffect(() => onSlowChange(setWaking), []);
-  useEffect(() => onUnauthorized(() => setUser(null)), []);
+  useEffect(() => onUnauthorized(loggedOut), []);
+
+  function loggedOut() {
+    setUser(null);
+    setSettings(null);
+  }
 
   async function checkSession() {
     setStartupError('');
@@ -37,15 +47,26 @@ function App() {
     checkSession();
   }, []);
 
+  // Settings may have changed on another device, so fetch them on every login, not just the first.
   useEffect(() => {
-    if (!user || catalog) return;
-    api('/api/modes').then(setCatalog, (err) => setStartupError(err.message));
+    if (!user) return;
+    Promise.all([api('/api/modes'), api('/api/settings')]).then(([modes, saved]) => {
+      setCatalog(modes);
+      setSettings(saved);
+      setConfig(configFrom(saved));
+    }, (err) => setStartupError(err.message));
   }, [user]);
 
   async function logout() {
     await api('/api/logout', { method: 'POST' }).catch(() => {});
-    setUser(null);
+    loggedOut();
     setScreen({ name: 'home' });
+  }
+
+  // New defaults apply to Home right away; the selected mode stays.
+  function settingsSaved(saved) {
+    setSettings(saved);
+    setConfig(configFrom(saved, config.mode));
   }
 
   // Each round gets a fresh id so "Play again" remounts the quiz with new questions.
@@ -62,7 +83,7 @@ function App() {
         <button type="button" class="primary full" onClick=${() => location.reload()}>Try again</button>
       </main>
     `;
-  } else if (user === undefined || (user && !catalog)) {
+  } else if (user === undefined || (user && !settings)) {
     content = html`<main class="card"><${Spinner} /></main>`;
   } else if (user === null) {
     // Always land on home after logging in, even if the session expired mid-round.
@@ -76,6 +97,7 @@ function App() {
       <${Quiz}
         key=${screen.round}
         config=${config}
+        autoAdvance=${settings.autoAdvance}
         onFinish=${(outcome) => setScreen({ name: 'summary', ...outcome })}
         onQuit=${() => setScreen({ name: 'home' })}
       />
@@ -89,14 +111,34 @@ function App() {
         onHome=${() => setScreen({ name: 'home' })}
       />
     `;
+  } else if (screen.name === 'progress') {
+    content = html`<${Progress} onHome=${() => setScreen({ name: 'home' })} />`;
+  } else if (screen.name === 'settings') {
+    content = html`
+      <${Settings}
+        settings=${settings}
+        generations=${catalog.generations}
+        username=${user.username}
+        onSaved=${settingsSaved}
+        onLogout=${logout}
+      />
+    `;
   } else {
     content = html`<${Home} modes=${catalog.modes} generations=${catalog.generations} initialConfig=${config} onStart=${startRound} />`;
   }
 
+  // No navigation mid-round, so a stray tap can't throw a round away (Quit is on the quiz screen).
+  const showNav = user && settings && screen.name !== 'quiz';
+  const navLink = (name, label) => html`
+    <button type="button" class=${`nav-link ${screen.name === name ? 'is-current' : ''}`} aria-current=${screen.name === name ? 'page' : undefined} onClick=${() => setScreen({ name })}>
+      ${label}
+    </button>
+  `;
+
   return html`
     <header class="app-header">
-      <span class="brand">Poké Quiz</span>
-      ${user && html`<span class="user">${user.username} · <button type="button" class="link" onClick=${logout}>Log out</button></span>`}
+      ${showNav ? html`<button type="button" class="brand" onClick=${() => setScreen({ name: 'home' })}>Poké Quiz</button>` : html`<span class="brand">Poké Quiz</span>`}
+      ${showNav && html`<nav class="nav">${navLink('progress', 'Progress')}${navLink('settings', 'Settings')}</nav>`}
     </header>
     ${content}
     ${waking && html`<${WakeUpOverlay} />`}

@@ -211,9 +211,10 @@ More modes are expected beyond the initial set, so modes are pluggable.
 Each question: `{ questionKey, mode, answerType, prompt, sprite?, choices[], answer }`. Multiple choice, 4 options unless noted.
 
 ### Mode registry
-- Each mode is one file in `src/quiz/modes/` exporting `{ id, label, answerType, candidates(pool), question(candidate, pool, random) }`:
+- Each mode is one file in `src/quiz/modes/` exporting `{ id, label, answerType, candidates(pool), question(candidate, pool, random), describe(key) }`:
   - `candidates(pool)` lists every possible question for the selected Pokémon as `{ key, ... }`.
   - `question(candidate, pool, random)` builds one question (prompt, choices, answer).
+  - `describe(key)` turns a stored question key back into `{ title, sprite?, attackType?, defenderTypes?, answer? }` for the progress view (`null` if unrecognized).
   - Picking which candidates go into a round lives in one shared place (`src/quiz/generateRound.js`), so the weighting below applies to every mode without each mode reimplementing it.
 - `src/quiz/modes/index.js` collects them; `/api/quiz` and `/api/modes` read from the registry. No mode-specific `if/else` in routes.
 - `answerType` tells the frontend which input component to render: `"choice"` (pick one → `MultipleChoice`), `"types"` (pick 1–2 types → `TypePicker`). New answer types get a new component; new modes that reuse an existing answer type need **no frontend changes**.
@@ -233,6 +234,8 @@ When generating a round, weight items so I see weak ones more:
 
 Keep it a simple scoring function in `src/quiz/weighting.js`, shared by all modes; no need for a full SM-2 implementation.
 
+As built: new = 1; last answer wrong = 10–20 (higher the more often it's missed); answered right = rests for 2^(streak−1) days (1, 2, 4, 8…) at 5% weight, then due again at 1–4. Rounds are drawn by weighted sampling without replacement, so a round always fills even if everything is resting.
+
 ## 10. Frontend
 
 Single page, Preact + htm (see §2), mobile-first. A root `App` component holds the current screen and user/settings state; each screen is a component in `public/screens/`, reusable pieces live in `public/components/`.
@@ -242,10 +245,11 @@ Single page, Preact + htm (see §2), mobile-first. A root `App` component holds 
   - default round length (10/20/30)
   - default generations
   - auto-advance after a correct answer (on/off)
-  - (easy to add more keys later; defaults live in one place on the server)
+  - (easy to add more keys later; defaults live in one place on the server: `DEFAULT_SETTINGS` in `src/routes/settings.js`)
+  - Log out lives here (with "Logged in as …"); the header has Progress and Settings links, hidden during a round.
 - **Question view:** sprite (if any), prompt, big tap-friendly choices, immediate right/wrong feedback (show the correct answer on a miss), "Next".
 - **Round summary:** score, missed items list, "Play again".
-- **Progress view:** accuracy per mode, top 10 weakest Pokémon/matchups.
+- **Progress view:** accuracy per mode, top 10 weakest Pokémon/matchups (per mode), recent rounds.
 - **Wake-up handling:** the first request after idle can take several seconds (Render + Neon both cold-start). Show a "Waking up the server…" loader instead of a blank screen; don't let fetches time out too aggressively (≥30s).
 - Type colors as badges (standard type color palette).
 

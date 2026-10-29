@@ -1,3 +1,4 @@
+import { POKEMON_BY_ID } from '../pokemon.js';
 import { TYPES } from '../typeEffectiveness.js';
 
 // Show a sprite and name, select its 1 or 2 types from all 18.
@@ -18,5 +19,10 @@ export default {
       choices: TYPES,
       answer: pokemon.types,
     };
+  },
+
+  describe(key) {
+    const pokemon = POKEMON_BY_ID.get(Number(key.split(':')[1]));
+    return pokemon ? { title: pokemon.name, sprite: pokemon.sprite, answer: pokemon.types } : null;
   },
 };

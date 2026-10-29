@@ -4,7 +4,9 @@ import cookieSession from 'cookie-session';
 import express from 'express';
 import { requireAuth, SESSION_MAX_AGE_MS } from './middleware/requireAuth.js';
 import { authRouter } from './routes/auth.js';
+import { progressRouter } from './routes/progress.js';
 import { quizRouter } from './routes/quiz.js';
+import { settingsRouter } from './routes/settings.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -44,6 +46,8 @@ export function createApp({ sessionSecret = process.env.SESSION_SECRET } = {}) {
   app.use('/api', authRouter());
   app.use('/api', requireAuth);
   app.use('/api', quizRouter());
+  app.use('/api', progressRouter());
+  app.use('/api', settingsRouter());
 
   // Unknown API routes (only reachable when logged in).
   app.use('/api', (req, res) => {

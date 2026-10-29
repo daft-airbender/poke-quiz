@@ -52,4 +52,17 @@ export default {
       answer: LABELS.get(multiplier(attackType, defenderTypes)),
     };
   },
+
+  // "matchup:fire>grass/steel"
+  describe(key) {
+    const [attackType, combo = ''] = key.slice('matchup:'.length).split('>');
+    const defenderTypes = combo.split('/');
+    if (![attackType, ...defenderTypes].every((type) => TYPES.includes(type))) return null;
+    return {
+      title: `${capitalize(attackType)} vs ${defenderTypes.map(capitalize).join('/')}`,
+      attackType,
+      defenderTypes,
+      answer: LABELS.get(multiplier(attackType, defenderTypes)),
+    };
+  },
 };

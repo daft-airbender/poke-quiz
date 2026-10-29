@@ -5,9 +5,12 @@ import { ANSWER_TYPES } from '../answerTypes.js';
 import { Spinner } from '../components/Loader.js';
 import { QuestionView } from '../components/QuestionView.js';
 
+// How long a correct answer stays on screen before auto-advance moves on.
+const AUTO_ADVANCE_MS = 900;
+
 // Plays one round. Answers are checked here (questions include the answer) and recorded
 // to the server in the background, so a slow request never blocks the next question.
-export function Quiz({ config, onFinish, onQuit }) {
+export function Quiz({ config, autoAdvance, onFinish, onQuit }) {
   const [questions, setQuestions] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [index, setIndex] = useState(0);
@@ -16,6 +19,7 @@ export function Quiz({ config, onFinish, onQuit }) {
   const pendingSaves = useRef([]);
   const startedAt = useRef(new Date());
   const nextButton = useRef(null);
+  const finishing = useRef(false);
 
   async function load() {
     setLoadError('');
@@ -38,6 +42,14 @@ export function Quiz({ config, onFinish, onQuit }) {
   // Focus "Next" after answering, so Enter/Space advances on a laptop.
   useEffect(() => {
     if (response) nextButton.current?.focus();
+  }, [response]);
+
+  // Auto-advance after a correct answer (Settings). A miss waits for "Next" so I can read the answer.
+  // Tapping "Next" first changes `response`, which cancels the timer.
+  useEffect(() => {
+    if (!autoAdvance || !response?.correct) return;
+    const timer = setTimeout(next, AUTO_ADVANCE_MS);
+    return () => clearTimeout(timer);
   }, [response]);
 
   // Preload the next sprite so it appears instantly.
@@ -75,6 +87,9 @@ export function Quiz({ config, onFinish, onQuit }) {
   }
 
   async function finish() {
+    // Auto-advance and a tap on "See results" can both land here; record the round once.
+    if (finishing.current) return;
+    finishing.current = true;
     const saves = [...pendingSaves.current];
     saves.push(
       api('/api/quiz/session', {
