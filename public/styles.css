@@ -304,8 +304,11 @@ button:focus-visible {
   gap: 10px;
 }
 
-/* Matchup has 6 short options: 3 per row. */
-.choices-compact {
+.choices-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.choices-3 {
   grid-template-columns: repeat(3, 1fr);
 }
 

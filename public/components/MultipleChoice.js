@@ -1,5 +1,12 @@
 import { html } from 'htm/preact';
 
+// Short options (0×, ½×…) sit 2 or 3 to a row; long lists (regions) use 2 columns; names get a row each.
+function layoutClass(choices) {
+  const short = choices.every((choice) => choice.length <= 3);
+  if (short) return choices.length % 3 === 0 ? 'choices-3' : 'choices-2';
+  return choices.length > 4 ? 'choices-2' : '';
+}
+
 // Answer input for answerType "choice": tap one option.
 // After answering, the correct option turns green and a wrong pick turns red.
 export function MultipleChoice({ choices, answer, response, onSubmit }) {
@@ -13,7 +20,7 @@ export function MultipleChoice({ choices, answer, response, onSubmit }) {
   };
 
   return html`
-    <div class=${`choices ${choices.length > 4 ? 'choices-compact' : ''}`}>
+    <div class=${`choices ${layoutClass(choices)}`}>
       ${choices.map(
         (choice) => html`
           <button

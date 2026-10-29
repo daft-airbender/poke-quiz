@@ -5,7 +5,7 @@ import { TYPES } from '../typeEffectiveness.js';
 // Correct only if the selected set matches exactly (checked by the frontend).
 export default {
   id: 'type',
-  label: 'Type it',
+  label: 'Type',
   answerType: 'types',
 
   candidates(pool) {

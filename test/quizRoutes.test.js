@@ -22,7 +22,8 @@ test('GET /api/modes lists modes and generations', async () => {
   const res = await get('/api/modes');
   assert.equal(res.status, 200);
   const body = await res.json();
-  assert.deepEqual(body.modes.map((m) => m.id), ['name', 'type', 'matchup']);
+  assert.equal(body.modes[0].id, 'name-choice');
+  assert.ok(body.modes.every((m) => m.id && m.label && m.answerType));
   assert.deepEqual(body.generations, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
 });
 
@@ -38,9 +39,9 @@ test('POST /api/quiz/answer rejects bad bodies with 400', async () => {
   for (const body of [
     {},
     { mode: 'nope', questionKey: 'nope:1', correct: true },
-    { mode: 'name', questionKey: 'type:1', correct: true },
-    { mode: 'name', questionKey: 'name:1', correct: 'yes' },
-    { mode: 'name', questionKey: `name:${'x'.repeat(200)}`, correct: true },
+    { mode: 'name-choice', questionKey: 'type:1', correct: true },
+    { mode: 'name-choice', questionKey: 'name-choice:1', correct: 'yes' },
+    { mode: 'name-choice', questionKey: `name-choice:${'x'.repeat(200)}`, correct: true },
   ]) {
     const res = await post('/api/quiz/answer', body);
     assert.equal(res.status, 400, JSON.stringify(body));
@@ -48,7 +49,7 @@ test('POST /api/quiz/answer rejects bad bodies with 400', async () => {
 });
 
 test('POST /api/quiz/session rejects bad bodies with 400', async () => {
-  const valid = { mode: 'name', total: 10, correct: 7, startedAt: '2026-10-29T10:00:00Z', finishedAt: '2026-10-29T10:05:00Z' };
+  const valid = { mode: 'name-choice', total: 10, correct: 7, startedAt: '2026-10-29T10:00:00Z', finishedAt: '2026-10-29T10:05:00Z' };
   for (const body of [
     { ...valid, mode: 'nope' },
     { ...valid, total: 0 },

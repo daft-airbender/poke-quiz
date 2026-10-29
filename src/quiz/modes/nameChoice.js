@@ -3,12 +3,12 @@ import { sample, shuffle } from '../random.js';
 
 // Show a sprite, pick the name from 4 options.
 export default {
-  id: 'name',
-  label: 'Name it',
+  id: 'name-choice',
+  label: 'Name (multiple choice)',
   answerType: 'choice',
 
   candidates(pool) {
-    return pool.map((pokemon) => ({ key: `name:${pokemon.id}`, pokemon }));
+    return pool.map((pokemon) => ({ key: `name-choice:${pokemon.id}`, pokemon }));
   },
 
   question({ pokemon }, pool, random) {

@@ -46,13 +46,13 @@ test('weightedSample returns distinct items and favors heavy ones', () => {
 test('generateRound brings back missed questions and skips resting ones', () => {
   // Gen 1 has 151 name questions. Miss 5 of them; have 100 others resting after a correct answer.
   const progress = new Map();
-  for (let id = 1; id <= 5; id++) progress.set(`name:${id}`, record(1, 0, 0, 0));
-  for (let id = 50; id < 150; id++) progress.set(`name:${id}`, record(1, 1, 1, 0));
+  for (let id = 1; id <= 5; id++) progress.set(`name-choice:${id}`, record(1, 0, 0, 0));
+  for (let id = 50; id < 150; id++) progress.set(`name-choice:${id}`, record(1, 1, 1, 0));
 
   let missedShown = 0;
   let restingShown = 0;
   for (let run = 0; run < 100; run++) {
-    for (const q of generateRound({ modeId: 'name', count: 10, gens: [1], progress, now })) {
+    for (const q of generateRound({ modeId: 'name-choice', count: 10, gens: [1], progress, now })) {
       const id = Number(q.questionKey.split(':')[1]);
       if (id <= 5) missedShown++;
       else if (id >= 50 && id < 150) restingShown++;

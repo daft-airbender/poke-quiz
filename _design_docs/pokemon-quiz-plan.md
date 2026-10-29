@@ -220,11 +220,31 @@ Each question: `{ questionKey, mode, answerType, prompt, sprite?, choices[], ans
 - `answerType` tells the frontend which input component to render: `"choice"` (pick one → `MultipleChoice`), `"types"` (pick 1–2 types → `TypePicker`). New answer types get a new component; new modes that reuse an existing answer type need **no frontend changes**.
 - Adding a mode = one server file (+ a component only if it needs a new answer type).
 
-### Initial modes
-1. **Name it** (`name`, `choice`): show sprite → pick the name. Distractors: preferably same-generation Pokémon.
-2. **Type it** (`type`, `types`): show sprite + name → select its type(s). Allow 1 or 2 selections from the 18 types; correct only if the set matches exactly.
-3. **Matchup** (`matchup`, `choice`): "Fire attack vs Grass/Steel defender — how effective?" → choose 0× / ¼× / ½× / 1× / 2× / 4×. Generate defenders from real Pokémon type combos so they're meaningful. Question keys sort defender types alphabetically (`matchup:fire>grass/steel`) so the same matchup always maps to one key.
-4. **Best attack** (`best-attack`, `choice`, v1.1): show a Pokémon → pick the super-effective attack type from 4 options.
+### Modes v1 (from `modes-v1.md`)
+The first three modes (Name it / Type it / Matchup) became the list below. The SRS treats each mode as a card type and each question key as a card, so **keys must not change once SRS history exists**. Wrong options are not part of a card: they're picked fresh every time.
+
+| id | Label | answerType | Card (key) | Count |
+|---|---|---|---|---|
+| `name-text` | Name (free text) | `text` | sprite → name (`name-text:25`) | 1,025 |
+| `name-choice` | Name (multiple choice) | `choice` | sprite → name of 4, same-generation distractors (`name-choice:25`) | 1,025 |
+| `type` | Type | `types` | sprite + name → its 1–2 types, exact set (`type:25`) | 1,025 |
+| `effectiveness-single` | Effectiveness (single) | `choice` | attack type vs one defending type → 0× ½× 1× 2× (`effectiveness-single:fire>grass`) | 324 |
+| `effectiveness-dual` | Effectiveness (dual) | `choice` | attack type vs a real dual-type combo → 0× ¼× ½× 1× 2× 4× (`effectiveness-dual:fire>grass/steel`) | 2,448 |
+| `counters-single` | Counters (single) | `types` | one defending type → select **all** attack types that are 2×+ (`counters-single:grass`) | 18 |
+| `counters-dual` | Counters (dual) | `types` | real dual-type combo → select all 2×+ (4× isn't marked separately) (`counters-dual:grass/steel`) | 136 |
+| `mon-to-dex` | Pokémon → Pokédex # | `number` | sprite + name → exact number, numeric keypad (`mon-to-dex:25`) | 1,025 |
+| `dex-to-mon` | Pokédex # → Pokémon | `text` | "#025" → name (`dex-to-mon:25`) | 1,025 |
+| `mon-to-region` | Pokémon → Region | `choice` | sprite + name → one of all 10 regions (`mon-to-region:25`) | 1,025 |
+| `region-to-mon` | Region → Pokémon | `choice` | "Which is from Kanto?" → 4 options with sprite + name (`region-to-mon:25`, one card per Pokémon) | 1,025 |
+
+- **Defender types** in keys are sorted alphabetically. Dual combos come from real Pokémon; abilities (Levitate etc.) are ignored. Matchup examples show a Pokémon with exactly those types.
+- **Regions:** a Pokémon's region is its debut generation's region (Kanto … Paldea), except Wyrdeer, Kleavor, Ursaluna, Basculegion, Sneasler, Overqwil and Enamorus, which are **Hisui** (Gen 8, from Legends: Arceus). Region → Pokémon distractors are from *other* regions within 2 generations of the answer (Hisui counts as Gen 8).
+- **Free-text names:** compared ignoring case, accents, spaces and punctuation (♀/♂ also accept f/m).
+  - Close typo (1 edit for names ≤5 letters, else 2; swapped letters count as one) → "Double-check spelling." and retry. 3 close misses → wrong.
+  - Another real Pokémon's name is always wrong, never a typo (e.g. Porygon-Z for Porygon2).
+  - Correct after a retry counts as correct. (SRS: no rating is pre-selected; Good stays the default.)
+- **Pokédex #:** exact number only, 1–1025.
+- `best-attack` from the original plan is dropped; Counters covers it.
 
 ### Selection weighting (simple spaced repetition)
 When generating a round, weight items so I see weak ones more:
@@ -324,9 +344,10 @@ Work through these in order; stop after each and summarize what was done.
 5. **Quiz API:** mode registry + `name`, `type`, `matchup` modes; `/api/modes`, `/api/quiz`, `/api/quiz/answer`, `/api/quiz/session`.
 6. **Frontend:** login → home → quiz → summary, `MultipleChoice` + `TypePicker` components, wake-up loader.
 7. **Progress & settings:** weighting, `/api/progress/summary`, progress view; `/api/settings` + settings screen.
-   - **Local testing checkpoint:** stop here. I play-test the full MVP locally (all screens and modes, progress, settings) against `poke-quiz-dev`, and we fix what I find before deploying.
-8. **Deploy:** `render.yaml`, deploy notes in README, verify end to end on phone + laptop.
-9. **(v1.1)** `best-attack` mode, then further modes via the registry.
+   - **Local testing checkpoint:** I play-test the full MVP locally (all screens and modes, progress, settings) against `poke-quiz-dev`, and we fix what I find before deploying.
+8. **Modes v1:** the 11 modes above, in three chunks: (a) rename/split the existing modes + region data, (b) Counters, Pokémon → Region, Region → Pokémon, (c) the `text` and `number` answer types and their three modes.
+9. **Spaced repetition** (`pokemon-quiz-srs-spec.md`), in phases S1–S8: scheduler core, tier/queue/session rules, database, Play API, Play screen, Free Play, Bank/Mastered screens, Progress screen. Then a local testing checkpoint.
+10. **Deploy:** `render.yaml`, deploy notes in README, verify end to end on phone + laptop. (Open question: deploy the current version earlier so it's usable on a phone while the SRS is built.)
 
 ## 15. Done when
 

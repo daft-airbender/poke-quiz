@@ -10,7 +10,7 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
-// One row per (user, question), e.g. "name:6", "type:25", "matchup:fire>grass/steel".
+// One row per (user, question), e.g. "name-choice:6", "type:25", "effectiveness-dual:fire>grass/steel".
 export const progress = pgTable(
   'progress',
   {

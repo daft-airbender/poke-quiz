@@ -7,7 +7,7 @@ A personal web app for quizzing myself on Pokémon names, types, and type matchu
 - **Database:** Postgres on Neon (Drizzle ORM), coming in milestone 3
 - **Hosting:** Render free web service
 
-See [`pokemon-quiz-plan.md`](pokemon-quiz-plan.md) for the full design and milestones.
+Design docs live in [`_design_docs/`](_design_docs/): the [plan and milestones](_design_docs/pokemon-quiz-plan.md), the [quiz modes](_design_docs/modes-v1.md), and the [spaced-repetition spec](_design_docs/pokemon-quiz-srs-spec.md).
 
 ## Requirements
 
