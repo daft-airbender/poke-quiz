@@ -39,6 +39,9 @@ export function getMode(id) {
 
 // How many questions each mode has across all generations (computed once).
 const totals = new Map(MODES.map((mode) => [mode.id, mode.candidates(ALL_POKEMON).length]));
+// Whether a generation filter limits a mode's cards: not for modes that always use every generation (regions,
+// single-type charts), nor for type-chart modes, whose cards are type combos rather than Pokémon.
+const usesGenerations = new Map(MODES.map((mode) => [mode.id, !mode.allGenerations && Boolean(mode.candidates(ALL_POKEMON)[0]?.pokemon)]));
 
 // What the frontend needs to show the mode picker and pick an answer component.
 export function listModes() {
@@ -51,6 +54,7 @@ export function listModes() {
     answerType,
     allGenerations,
     allGenerationsNote,
+    usesGenerations: usesGenerations.get(id),
     totalQuestions: totals.get(id),
   }));
 }

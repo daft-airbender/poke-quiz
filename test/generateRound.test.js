@@ -252,3 +252,20 @@ test('region and single-type modes ignore the generation filter, and say why', (
     assert.ok(gens.size > 1, `${modeId} stayed in Gen 1`);
   }
 });
+
+test('which modes a generation filter limits', () => {
+  const uses = Object.fromEntries(listModes().map((m) => [m.id, m.usesGenerations]));
+  assert.deepEqual(uses, {
+    'name-text': true,
+    'name-choice': true,
+    type: true,
+    'effectiveness-single': false,
+    'effectiveness-dual': false,
+    'counters-single': false,
+    'counters-dual': false,
+    'mon-to-dex': true,
+    'dex-to-mon': true,
+    'mon-to-region': false,
+    'region-to-mon': false,
+  });
+});

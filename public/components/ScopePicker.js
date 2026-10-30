@@ -7,6 +7,11 @@ import { ModeInfoButton } from './ModeInfo.js';
 export function ScopePicker({ modes, generations, scope, onChange }) {
   const selected = scope.modes ?? modes.map((m) => m.id);
   const gens = scope.gens ?? [];
+  // Selected modes the generation filter doesn't limit (regions, type charts). If that's all of them, the chips
+  // lock to All; the chosen generations are kept for when a mode that uses them is selected again.
+  const chosen = modes.filter((m) => selected.includes(m.id));
+  const ignoring = chosen.filter((m) => !m.usesGenerations);
+  const gensUnused = chosen.length > 0 && ignoring.length === chosen.length;
 
   function toggleMode(id) {
     const next = selected.includes(id) ? selected.filter((m) => m !== id) : [...selected, id];
@@ -55,8 +60,15 @@ export function ScopePicker({ modes, generations, scope, onChange }) {
       ${selected.length === 0 && html`<p class="error small" role="alert">Pick at least one mode.</p>`}
 
       <h3 class="small muted">Generations</h3>
-      <${GenerationChips} generations=${generations} selected=${gens} onChange=${(next) => onChange({ ...scope, gens: next.length ? next : null })} />
-      <p class="muted small">Type-chart modes (Effectiveness, Counters) and region modes aren't tied to a generation, so this doesn't limit them.</p>
+      <${GenerationChips}
+        generations=${generations}
+        selected=${gens}
+        locked=${gensUnused}
+        onChange=${(next) => onChange({ ...scope, gens: next.length ? next : null })}
+      />
+      ${gensUnused
+        ? html`<p class="muted small">None of the selected modes use generations: region modes would give the answer away, and type-chart modes are about types, not Pokémon.</p>`
+        : ignoring.length > 0 && html`<p class="muted small">Generations don't apply to ${ignoring.map((m) => m.label).join(', ')}.</p>`}
     </div>
   `;
 }
