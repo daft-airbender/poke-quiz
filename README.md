@@ -76,6 +76,13 @@ To add a mode, create the file and list it in `src/quiz/modes/index.js`. `src/qu
 - Settings (default round length, default generations, auto-advance, theme) are stored on the server, so they sync across devices. Defaults and validation live in `src/routes/settings.js`.
 - **Reset all progress** (bottom of Settings, after a confirmation) deletes every per-user progress/history table in one transaction, keeping the login and settings. The list of tables is `USER_DATA_TABLES` in `src/db/userData.js`; a test fails if a table with a `user_id` column is missing from it, so new tables (e.g. the SRS ones) can't be forgotten.
 
+## Spaced repetition (in progress)
+
+Being built in phases from [`_design_docs/pokemon-quiz-srs-spec.md`](_design_docs/pokemon-quiz-srs-spec.md); not wired into the app yet.
+
+- `src/srs/config.js`: every SRS setting in one object (retention, learning steps, new cards per day, bank and mastery rules, …).
+- `src/srs/scheduler.js`: a pure wrapper around [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs) 5.4.2 (FSRS-6): `answer(card, rating, now)`, `preview(card, now)`, `retrievability(card, now)`. The rest of the app uses its card shape, never ts-fsrs types. Fuzz is seeded from the review time and card state, so replaying a card's history reproduces its due dates.
+
 ## Database
 
 Two separate Neon projects, so local testing can't touch real data or use up production's free compute:
