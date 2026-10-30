@@ -35,9 +35,10 @@ const TAB_NOTES = {
 };
 
 // Browse cards by tier, search and filter them, and move them between tiers (spec: "Screens and actions").
-export function Cards({ modes, generations, initialTab = 'rotation', onPractice }) {
+// initialFilters: e.g. { mode } or { gen } when opened from a Progress category bar.
+export function Cards({ modes, generations, initialTab = 'rotation', initialFilters = {}, onPractice }) {
   const [tab, setTab] = useState(initialTab);
-  const [filters, setFilters] = useState({ q: '', mode: '', gen: '' });
+  const [filters, setFilters] = useState({ q: '', mode: '', gen: '', ...initialFilters });
   const [sort, setSort] = useState('fading');
   const [page, setPage] = useState(null); // { total, cards }
   const [loadingMore, setLoadingMore] = useState(false);

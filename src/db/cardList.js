@@ -6,7 +6,7 @@ import { cardFromRow, rowFromCard } from '../srs/rows.js';
 import { newCardMemory } from '../srs/scheduler.js';
 import { ACTIONS_BY_TIER, manualTierChange, newTierFields } from '../srs/tiers.js';
 import { cardEvents, cards, cardState } from './schema.js';
-import { retrievabilitySql } from './srs.js';
+import { ensureYesterdaySnapshot, retrievabilitySql } from './srs.js';
 
 export const LIST_TIERS = ['all', 'unseen', 'rotation', 'bank', 'mastered', 'trouble'];
 export const SORTS = ['fading', 'strongest', 'name'];
@@ -119,6 +119,7 @@ async function applyAction(db, userId, cardIds, action, now) {
       .from(cardState)
       .where(and(eq(cardState.userId, userId), inArray(cardState.cardId, cardIds)))
       .for('update');
+    await ensureYesterdaySnapshot(tx, userId, now);
     const byId = new Map(rows.map((row) => [row.cardId, row]));
     const updates = [];
     const events = [];

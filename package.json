@@ -15,6 +15,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env scripts/migrate.js",
     "create-user": "node --env-file=.env scripts/create-user.js",
+    "rebuild:snapshots": "node --env-file-if-exists=.env scripts/rebuild-snapshots.js",
     "test": "node --test"
   },
   "dependencies": {

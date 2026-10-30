@@ -374,8 +374,9 @@ async function freePlayNext(db, session, state, step, now, progress) {
 // ---------------------------------------------------------------------------------------------
 // Answering
 
-// Records yesterday's tier counts the first time anything happens on a new day (spec: daily_tier_snapshot).
-async function ensureYesterdaySnapshot(tx, userId, now) {
+// Records yesterday's tier counts the first time anything changes on a new day (spec: daily_tier_snapshot):
+// an answer, a manual tier action or an undo.
+export async function ensureYesterdaySnapshot(tx, userId, now) {
   const yesterday = addDays(dayKey(now, SRS_CONFIG.timeZone), -1);
   const [existing] = await tx
     .select({ day: dailyTierSnapshot.day })
@@ -509,6 +510,7 @@ export async function undoTransition(db, { userId, cardId, logId, undo, now }) {
       row.tier === latest.tierAfter &&
       undo.tier === latest.tierBefore;
     if (!ok) throw Object.assign(new Error('That change can no longer be undone'), { status: 409 });
+    await ensureYesterdaySnapshot(tx, userId, now);
 
     const { tier, bankedAt, masteredAt, bankCorrectDays, bankLastCounted, bankPrevCounted } = tierSnapshotFromJson(undo);
     await tx

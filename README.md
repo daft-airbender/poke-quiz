@@ -31,6 +31,7 @@ Health check: `curl http://localhost:3000/healthz` returns `ok`.
 | `npm start` | Start the server (used by Render) |
 | `npm test` | Run tests with Node's built-in test runner |
 | `npm run fetch:pokemon` | Rebuild `data/pokemon.json` from PokéAPI (one-off; responses cached in `.cache/`) |
+| `npm run rebuild:snapshots` | Rebuild `daily_tier_snapshot` (the Collection growth chart) from `review_log` + `card_events`, for repair or backfill |
 | `npm run build:palettes` | Rebuild `data/pokemon-palettes.json` (theme colors) from the sprites (one-off; sprites cached in `.cache/sprites/`) |
 | `npm run db:generate` | Generate a SQL migration in `drizzle/` from `src/db/schema.js` (no DB needed) |
 | `npm run db:migrate` | Apply pending migrations (uses `DATABASE_URL_UNPOOLED` if set, else `DATABASE_URL`), then sync the SRS card catalog |
@@ -75,14 +76,14 @@ To add a mode, create the file and list it in `src/quiz/modes/index.js`. Its que
 - **Free Play** (Home) quizzes on any modes and generations you pick, shuffled with no repeats until the filter is used up. One tap per right answer, no ratings. It never changes scheduling: answers only go to `review_log` (mode `free_play`, before = after values). Its filters and length are remembered separately from Play's.
 - **Cards** (header) lists cards by tier (Rotation, Bank, Mastered, Trouble, All) with search, mode / generation filters and sorting by recall chance. Each card opens a detail sheet (recall now, stability, next review, bank count) with its actions: Restore to rotation, Demote to bank, Move to bank, Mark as mastered. Bulk actions apply one of those to the whole filtered list or N random cards. The Bank and Mastered tabs start practice sessions. A never-answered card moved to the bank or mastered by hand starts with 30-day stability, so its first check-in is about 100 days out.
 - **Settings → What to learn** picks which modes and generations new cards come from. Cards already started keep coming back for review.
-- **Progress** shows card counts per tier and recent sessions; the charts come in a later phase.
+- **Progress**: headline numbers (mastered +N this week, daily streak, recall rate this week), Collection growth (cards per tier per day; 1 month / 3 months / 1 year / All), True recall rate per week (real tests of memory only, 90% target line, low-data weeks faded), bars by mode and by generation (tap to open those cards), a year-long activity calendar with the current streak outlined, a Free Play panel, and recent sessions. Charts are plain SVG (`public/components/charts.js`) with hover/keyboard tooltips and a "Show as table" view. Tier colors are one blue ramp, validated for color blindness and contrast in both modes.
 - **Theme:** Settings → Theme takes a Pokédex number and colors the app after that Pokémon. `public/themeColors.js` turns its palette into the CSS tokens (`--accent` fill, `--accent-ink` for text/borders, `--accent-soft`, `--bg`), adjusting lightness so every theme stays readable in light and dark mode (a test checks all 1,025). Right/wrong colors and type badges never change. The computed theme is cached in the device's localStorage so `index.html` applies it before the first paint.
 - Settings (theme, What to learn, last session length) are stored on the server, so they sync across devices. Defaults and validation live in `src/routes/settings.js`.
 - **Reset all progress** (bottom of Settings, after a confirmation) deletes every per-user progress/history table in one transaction, keeping the login and settings. The list of tables is `USER_DATA_TABLES` in `src/db/userData.js`; a test fails if a table with a `user_id` column is missing from it, so new tables can't be forgotten.
 
 ## Spaced repetition
 
-Built in phases from [`_design_docs/pokemon-quiz-srs-spec.md`](_design_docs/pokemon-quiz-srs-spec.md). Play (S5), Free Play (S6) and the Cards screens (S7) are live; the full Progress screen is next.
+Built in phases from [`_design_docs/pokemon-quiz-srs-spec.md`](_design_docs/pokemon-quiz-srs-spec.md). All phases are built: Play (S5), Free Play (S6), the Cards screens (S7) and the Progress screen (S8).
 
 - `src/srs/config.js`: every SRS setting in one object (retention, learning steps, new cards per day, bank and mastery rules, …).
 - **Tables** (migrations `0001_srs_tables`, `0002_retire_pre_srs_tables`, `0003_free_play_filter`): `cards` (shared catalog, one row per mode question), `card_state`, `sessions`, `review_log`, `card_events`, `daily_tier_snapshot`. `npm run db:migrate` also syncs `cards` with the mode registry (`src/srs/catalog.js`, `src/db/cards.js`). `review_log` + `card_events` replay to the exact `card_state` (`src/srs/replay.js`).

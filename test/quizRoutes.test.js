@@ -42,7 +42,7 @@ test('POST /api/progress/reset needs { confirm: true }', async () => {
 });
 
 test('progress and settings routes require a login', async () => {
-  for (const [method, path] of [['GET', '/api/progress/summary'], ['POST', '/api/progress/reset'], ['GET', '/api/settings'], ['PUT', '/api/settings']]) {
+  for (const [method, path] of [['GET', '/api/progress/stats'], ['POST', '/api/progress/reset'], ['GET', '/api/settings'], ['PUT', '/api/settings']]) {
     const res = await fetch(server.baseUrl + path, { method });
     assert.equal(res.status, 401, path);
   }

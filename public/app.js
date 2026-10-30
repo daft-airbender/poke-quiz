@@ -15,7 +15,7 @@ import { applyTheme } from './theme.js';
 
 // Root component: checks the session, loads modes, settings and themes, and switches between screens.
 // screen: { name: 'home' } | { name: 'free-play', length } | { name: 'play', session, next }
-//       | { name: 'summary', summary, session } | { name: 'cards', tab? } | { name: 'progress' } | { name: 'settings' }
+//       | { name: 'summary', summary, session } | { name: 'cards', tab?, filters? } | { name: 'progress' } | { name: 'settings' }
 function App() {
   const [user, setUser] = useState(undefined); // undefined = still checking, null = logged out
   const [catalog, setCatalog] = useState(null); // { modes, generations } from /api/modes
@@ -144,10 +144,11 @@ function App() {
       modes=${catalog.modes}
       generations=${catalog.generations}
       initialTab=${screen.tab}
+      initialFilters=${screen.filters}
       onPractice=${(kind) => startSession(kind)}
     />`;
   } else if (screen.name === 'progress') {
-    content = html`<${Progress} onHome=${() => setScreen({ name: 'home' })} />`;
+    content = html`<${Progress} onOpenCards=${(filters) => setScreen({ name: 'cards', tab: 'all', filters })} />`;
   } else if (screen.name === 'settings') {
     content = html`
       <${Settings}

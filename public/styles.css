@@ -14,6 +14,20 @@
   --correct-soft: #dcf5e6;
   --wrong: #d64545;
   --wrong-soft: #fde2e2;
+  /* Chart colors (fixed, never themed). Tiers are an ordinal one-hue ramp, validated for color vision deficiency
+     and contrast (dataviz validate_palette.js --ordinal): further along = stronger. Unseen is the unfilled track. */
+  --tier-unseen: #e8eef8;
+  --tier-rotation: #86b6ef;
+  --tier-bank: #3987e5;
+  --tier-mastered: #184f95;
+  --series-1: #2a78d6;
+  --chart-grid: #e1e0d9;
+  --chart-ink: #52514e;
+  --chart-muted: #898781;
+  --heat-1: #b7d3f6;
+  --heat-2: #6da7ec;
+  --heat-3: #2a78d6;
+  --heat-4: #104281;
   --radius: 14px;
   --shadow: 0 1px 3px rgb(0 0 0 / 0.08);
   color-scheme: light;
@@ -37,6 +51,18 @@
     --wrong: #ff6b6b;
     --wrong-soft: #3b1e1e;
     --shadow: none;
+    --tier-unseen: #2a303c;
+    --tier-rotation: #1c5cab;
+    --tier-bank: #5598e7;
+    --tier-mastered: #9ec5f4;
+    --series-1: #3987e5;
+    --chart-grid: #2c2c2a;
+    --chart-ink: #c3c2b7;
+    --chart-muted: #898781;
+    --heat-1: #184f95;
+    --heat-2: #256abf;
+    --heat-3: #5598e7;
+    --heat-4: #9ec5f4;
     color-scheme: dark;
   }
 }
@@ -1059,4 +1085,256 @@ button.brand {
   gap: 12px;
   padding: 6px 0;
   border-top: 1px solid var(--border);
+}
+
+/* Progress: stat tiles */
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.free-play-panel .stat-tile {
+  background: var(--bg);
+  box-shadow: none;
+}
+
+.stat-tile-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.stat-tile-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+/* Charts */
+
+.chart {
+  position: relative;
+  width: 100%;
+}
+
+.chart svg {
+  display: block;
+  overflow: visible;
+}
+
+.chart svg:focus-visible,
+.chart .bar-row:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+}
+
+.chart .grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+
+.chart .tick {
+  fill: var(--chart-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart .crosshair {
+  stroke: var(--chart-ink);
+  stroke-width: 1;
+}
+
+.chart .target {
+  stroke: var(--chart-ink);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.chart .area {
+  stroke: var(--card);
+  stroke-width: 2;
+}
+
+.tier-unseen { fill: var(--tier-unseen); }
+.tier-rotation { fill: var(--tier-rotation); }
+.tier-bank { fill: var(--tier-bank); }
+.tier-mastered { fill: var(--tier-mastered); }
+
+.chart .series-line {
+  fill: none;
+  stroke: var(--series-1);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart .series-dot {
+  fill: var(--series-1);
+  stroke: var(--card);
+  stroke-width: 2;
+}
+
+.chart .series-dot.low {
+  opacity: 0.35;
+}
+
+.chart .series-bar {
+  fill: var(--series-1);
+}
+
+.chart .bar-track {
+  fill: var(--tier-unseen);
+}
+
+.chart .bar-label,
+.chart .bar-value {
+  fill: var(--chart-ink);
+  font-size: 13px;
+}
+
+.chart .bar-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.chart .bar-row {
+  cursor: pointer;
+}
+
+.chart .bar-row .hit {
+  fill: transparent;
+}
+
+.chart .bar-row:hover .hit {
+  fill: var(--bg);
+}
+
+.chart-tooltip {
+  position: absolute;
+  transform: translate(8px, 0);
+  min-width: 140px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.15);
+  font-size: 0.85rem;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.chart-tooltip.left {
+  transform: translate(calc(-100% - 8px), 0);
+}
+
+.chart-tooltip-title {
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-tooltip-note {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.key-line {
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  font-size: 0.85rem;
+  color: var(--chart-ink);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch-key {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.swatch-key.level-0,
+.day-cell.level-0 { fill: var(--tier-unseen); background: var(--tier-unseen); }
+.swatch-key.level-1,
+.day-cell.level-1 { fill: var(--heat-1); background: var(--heat-1); }
+.swatch-key.level-2,
+.day-cell.level-2 { fill: var(--heat-2); background: var(--heat-2); }
+.swatch-key.level-3,
+.day-cell.level-3 { fill: var(--heat-3); background: var(--heat-3); }
+.swatch-key.level-4,
+.day-cell.level-4 { fill: var(--heat-4); background: var(--heat-4); }
+
+/* The current streak's days: a ring in the text color. */
+.day-cell.streak {
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+
+.calendar-scroll {
+  overflow-x: auto;
+  padding: 2px;
+}
+
+.chart-empty {
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--muted);
+  text-align: center;
+}
+
+.table-view summary {
+  cursor: pointer;
+  color: var(--accent-ink);
+  font-size: 0.9rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  max-height: 280px;
+  margin-top: 8px;
+}
+
+.table-view table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.table-view th,
+.table-view td {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
 }
