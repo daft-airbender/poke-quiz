@@ -353,8 +353,10 @@ Work through these in order; stop after each and summarize what was done.
 9. **Spaced repetition** (`pokemon-quiz-srs-spec.md`), in phases S1–S8: scheduler core, tier/queue/session rules, database, Play API, Play screen, Free Play, Bank/Mastered screens, Progress screen. Then a local testing checkpoint.
    - **Decided — Play scope ("What to learn" setting):** with ~10,000 cards across 11 modes, Settings gets a choice of which **modes** and **generations** Play introduces *new* cards from. It only gates new cards (queue tier 3, built in S2; Settings UI in S5): cards already studied in a turned-off mode or generation keep coming back for their due reviews and check-ins. Default: all modes and generations.
    - **Decided — charts** wait for the SRS Progress screen (S8); no interim chart on the current Progress page.
-   - Still open before S1: `ts-fsrs` version (5.4.2 recommended), deploy the current version first or not, charts as plain SVG or a library.
-10. **Deploy:** `render.yaml`, deploy notes in README, verify end to end on phone + laptop. (Open question: deploy the current version earlier so it's usable on a phone while the SRS is built.)
+   - **Decided — library:** `ts-fsrs` **5.4.2** (FSRS-6; matches the spec's stability/difficulty model). Not 6.x, whose default FSRS-7 model stores an extra per-card value.
+   - **Decided — charts:** plain SVG, no chart library (for now).
+   - **Decided — deploy after the SRS:** milestone 10 (Deploy) stays after the SRS and its testing checkpoint.
+10. **Deploy** (after the SRS): `render.yaml`, deploy notes in README, verify end to end on phone + laptop.
 
 ## 15. Done when
 
