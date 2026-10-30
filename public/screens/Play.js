@@ -283,7 +283,7 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
         `}
         ${phase === 'feedback' &&
         html`
-          <div class="feedback is-wrong" role="status">Correct Answer: <strong>${answerType.display(card.question.answer)}</strong></div>
+          <div class="feedback is-wrong" role="status">Answer: <strong>${answerType.display(card.question.answer)}</strong></div>
           <button type="button" class="primary full" ref=${nextButton} disabled=${!pending} onClick=${() => show(pending)}>
             ${pending ? 'Next' : 'Saving…'}
           </button>
