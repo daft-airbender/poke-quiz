@@ -76,6 +76,16 @@ body {
   background: var(--bg);
   color: var(--text);
   -webkit-tap-highlight-color: transparent;
+  /* No blinking text cursor on text you can't edit (it shows with the browser's caret browsing, F7). */
+  caret-color: transparent;
+}
+
+/* ...but keep it where you type. */
+input,
+textarea,
+select,
+[contenteditable] {
+  caret-color: auto;
 }
 
 #app {
