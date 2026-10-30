@@ -1,90 +1,77 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { html } from 'htm/preact';
-import { GenerationChips } from '../components/GenerationChips.js';
-import { Modal } from '../components/Modal.js';
-import { Segmented } from '../components/Segmented.js';
+import { api } from '../api.js';
+import { LengthPicker } from '../components/LengthPicker.js';
+import { Spinner } from '../components/Loader.js';
+import { lengthLabel } from '../format.js';
 
-export const ROUND_LENGTHS = [10, 20, 30];
+// Today at a glance, and Play. Play starts right away with the last length used; the small
+// "25 questions ▾" control changes it (spec: "Session length").
+export function Home({ onPlay, onSaveLength }) {
+  const [overview, setOverview] = useState(null);
+  const [error, setError] = useState('');
+  const [picking, setPicking] = useState(false);
 
-// Mode picker, generation filter, round length, Start.
-// config: { mode, gens, count }; gens = [] means all generations.
-// Generations and length start from Settings; changes here last until the page is reloaded.
-export function Home({ modes, generations, initialConfig, onStart }) {
-  const [config, setConfig] = useState(initialConfig);
-  const [infoMode, setInfoMode] = useState(null); // mode whose info dialog is open
-  const update = (changes) => setConfig({ ...config, ...changes });
-  const selectedMode = modes.find((mode) => mode.id === config.mode);
-  const gensLocked = Boolean(selectedMode?.allGenerations);
+  async function load() {
+    setError('');
+    try {
+      setOverview(await api('/api/play/overview'));
+    } catch (err) {
+      setError(err.message);
+    }
+  }
 
-  // Modes arrive in display order; group them under their headings, keeping that order.
-  const groups = [];
-  for (const mode of modes) {
-    const group = groups.find((g) => g.name === mode.group);
-    if (group) group.modes.push(mode);
-    else groups.push({ name: mode.group, modes: [mode] });
+  useEffect(() => {
+    load();
+  }, []);
+
+  if (error) {
+    return html`
+      <main class="card stack">
+        <p class="error" role="alert">${error}</p>
+        <button type="button" class="primary full" onClick=${load}>Try again</button>
+      </main>
+    `;
+  }
+  if (!overview) return html`<main class="card"><${Spinner} /></main>`;
+
+  const length = overview.lengths.play;
+  const studied = overview.rotation + overview.bank + overview.mastered;
+
+  async function pickLength(next) {
+    setPicking(false);
+    setOverview({ ...overview, lengths: { ...overview.lengths, play: next } });
+    await onSaveLength('play', next);
   }
 
   return html`
     <main class="stack">
-      <section class="card stack">
-        <h2>Mode</h2>
-        ${groups.map(
-          (group) => html`
-            <div key=${group.name} class="mode-group">
-              <h3>${group.name}</h3>
-              ${group.modes.map(
-                (mode) => html`
-                  <div key=${mode.id} class=${`mode-row ${config.mode === mode.id ? 'is-selected' : ''}`}>
-                    <button type="button" class="mode-select" aria-pressed=${config.mode === mode.id} onClick=${() => update({ mode: mode.id })}>
-                      ${mode.label}
-                    </button>
-                    <button type="button" class="mode-info" aria-label=${`About ${mode.label}`} onClick=${() => setInfoMode(mode)}>
-                      <${InfoIcon} />
-                    </button>
-                  </div>
-                `,
-              )}
-            </div>
-          `,
-        )}
+      <section class="card stack today">
+        <h2>Today</h2>
+        <div class="today-stats">
+          <div><span class="stat">${overview.dueNow}</span><span class="muted small">due now</span></div>
+          <div><span class="stat">${overview.newLeft}</span><span class="muted small">new left</span></div>
+        </div>
+        <p class="muted small">
+          ${studied === 0
+            ? 'Nothing studied yet. Play introduces new cards a few at a time.'
+            : `${overview.rotation} learning · ${overview.bank} in the bank · ${overview.mastered} mastered`}
+        </p>
+      </section>
+
+      <section class="stack">
+        <button type="button" class="primary full large play-button" onClick=${() => onPlay('play', length)}>Play</button>
+        <button type="button" class="length-control" aria-haspopup="dialog" onClick=${() => setPicking(true)}>
+          ${lengthLabel(length)} <span aria-hidden="true">▾</span>
+        </button>
       </section>
 
       <section class="card stack">
-        <h2>Generations</h2>
-        <${GenerationChips} generations=${generations} selected=${config.gens} locked=${gensLocked} onChange=${(gens) => update({ gens })} />
-        ${gensLocked && html`<p class="muted small">${selectedMode.label} always uses every generation. ${selectedMode.allGenerationsNote}</p>`}
+        <button type="button" class="secondary full" disabled>Free Play</button>
+        <p class="muted small">Quiz yourself on anything, without affecting your learning. Coming in the next update.</p>
       </section>
 
-      <section class="card stack">
-        <h2>Round length</h2>
-        <${Segmented}
-          options=${ROUND_LENGTHS.map((count) => ({ value: count, label: String(count) }))}
-          value=${config.count}
-          onChange=${(count) => update({ count })}
-        />
-      </section>
-
-      <button type="button" class="primary full large" onClick=${() => onStart(config)}>Start</button>
-
-      ${infoMode &&
-      html`
-        <${Modal} title=${infoMode.label} onClose=${() => setInfoMode(null)}>
-          <p>${infoMode.description}</p>
-          <p class="example"><span class="muted small">Example</span><br />${infoMode.example}</p>
-          <p class="muted small">${infoMode.totalQuestions.toLocaleString()} questions across all generations</p>
-          <button type="button" class="primary full" onClick=${() => setInfoMode(null)}>Got it</button>
-        <//>
-      `}
+      ${picking && html`<${LengthPicker} value=${length} onPick=${pickLength} onClose=${() => setPicking(false)} />`}
     </main>
-  `;
-}
-
-function InfoIcon() {
-  return html`
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="11" x2="12" y2="17" />
-      <circle cx="12" cy="7.5" r="0.6" fill="currentColor" />
-    </svg>
   `;
 }

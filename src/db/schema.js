@@ -13,7 +13,6 @@ import {
   smallint,
   text,
   timestamp,
-  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -26,44 +25,11 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
-// One row per (user, question), e.g. "name-choice:6", "type:25", "effectiveness-dual:fire>grass/steel".
-export const progress = pgTable(
-  'progress',
-  {
-    id: serial('id').primaryKey(),
-    userId: integer('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    questionKey: text('question_key').notNull(),
-    mode: text('mode').notNull(),
-    timesSeen: integer('times_seen').notNull().default(0),
-    timesCorrect: integer('times_correct').notNull().default(0),
-    // Current consecutive-correct count.
-    streak: integer('streak').notNull().default(0),
-    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
-  },
-  (table) => [unique('progress_user_question_unique').on(table.userId, table.questionKey)],
-);
-
-// History: one row per completed round.
-export const quizSessions = pgTable('quiz_sessions', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  mode: text('mode').notNull(),
-  total: integer('total').notNull(),
-  correct: integer('correct').notNull(),
-  startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
-  finishedAt: timestamp('finished_at', { withTimezone: true }).notNull(),
-});
-
 // ---------------------------------------------------------------------------------------------
 // Spaced repetition (see _design_docs/pokemon-quiz-srs-spec.md, "Data model").
-// Differences from the spec's sketch: per-user tables have user_id (multi-user-ready, like progress),
+// Differences from the spec's sketch: per-user tables have user_id (multi-user-ready),
 // settings stay in users.settings, and card_events records manual tier actions and undos so that
 // replaying a card's history (review_log + card_events) rebuilds its card_state exactly.
-// The progress / quiz_sessions tables above are the pre-SRS system; they're removed when Play replaces it.
 
 const timestamptz = (name) => timestamp(name, { withTimezone: true });
 

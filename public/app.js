@@ -5,25 +5,22 @@ import { api, onSlowChange, onUnauthorized } from './api.js';
 import { Spinner, WakeUpOverlay } from './components/Loader.js';
 import { Home } from './screens/Home.js';
 import { Login } from './screens/Login.js';
+import { Play } from './screens/Play.js';
+import { PlaySummary } from './screens/PlaySummary.js';
 import { Progress } from './screens/Progress.js';
-import { Quiz } from './screens/Quiz.js';
 import { Settings } from './screens/Settings.js';
-import { Summary } from './screens/Summary.js';
 import { applyTheme } from './theme.js';
 
-// The next round's choices, starting from the saved defaults. The mode isn't a setting.
-const configFrom = (settings, mode) => ({ mode, gens: settings.gens, count: settings.roundLength });
-
-// Root component: checks the session, loads modes and settings, and switches between screens.
-// screen: { name: 'home' } | { name: 'quiz', round } | { name: 'summary', results, saveFailed }
+// Root component: checks the session, loads modes, settings and themes, and switches between screens.
+// screen: { name: 'home' } | { name: 'play', session, next } | { name: 'summary', summary, session }
 //       | { name: 'progress' } | { name: 'settings' }
 function App() {
   const [user, setUser] = useState(undefined); // undefined = still checking, null = logged out
   const [catalog, setCatalog] = useState(null); // { modes, generations } from /api/modes
   const [themes, setThemes] = useState(null); // Pokédex number -> { name, colors } from /api/themes
   const [settings, setSettings] = useState(null); // from /api/settings, reloaded on every login
-  const [config, setConfig] = useState(null);
   const [screen, setScreen] = useState({ name: 'home' });
+  const [starting, setStarting] = useState(false);
   const [waking, setWaking] = useState(false);
   const [startupError, setStartupError] = useState('');
 
@@ -57,8 +54,6 @@ function App() {
       setThemes(themeList.themes);
       applyTheme(themeList.themes[saved.theme]?.colors ?? null);
       setSettings(saved);
-      // Start on the first mode in the list.
-      setConfig(configFrom(saved, modes.modes[0].id));
     }, (err) => setStartupError(err.message));
   }, [user]);
 
@@ -68,18 +63,29 @@ function App() {
     setScreen({ name: 'home' });
   }
 
-  // New defaults apply to Home right away; the selected mode stays.
   function settingsSaved(saved) {
     setSettings(saved);
     applyTheme(themes[saved.theme]?.colors ?? null);
-    setConfig(configFrom(saved, config.mode));
   }
 
-  // Each round gets a fresh id so "Play again" remounts the quiz with new questions.
-  const startRound = (roundConfig) => {
-    setConfig(roundConfig);
-    setScreen({ name: 'quiz', round: Date.now() });
-  };
+  // Remembers a session length chosen on Home (per kind), without touching other settings.
+  async function saveLength(kind, length) {
+    const saved = await api('/api/settings', { method: 'PUT', body: { lastLength: { ...settings.lastLength, [kind]: length } } });
+    setSettings(saved);
+  }
+
+  async function startSession(kind, length) {
+    if (starting) return;
+    setStarting(true);
+    try {
+      const { session, next } = await api('/api/play/sessions', { method: 'POST', body: length ? { kind, length } : { kind } });
+      setScreen({ name: 'play', session, next });
+    } catch (err) {
+      setStartupError(err.message);
+    } finally {
+      setStarting(false);
+    }
+  }
 
   let content;
   if (startupError) {
@@ -92,29 +98,28 @@ function App() {
   } else if (user === undefined || (user && !settings)) {
     content = html`<main class="card"><${Spinner} /></main>`;
   } else if (user === null) {
-    // Always land on home after logging in, even if the session expired mid-round.
+    // Always land on home after logging in, even if the session expired mid-play.
     const onLoggedIn = (loggedInUser) => {
       setUser(loggedInUser);
       setScreen({ name: 'home' });
     };
     content = html`<${Login} onLoggedIn=${onLoggedIn} />`;
-  } else if (screen.name === 'quiz') {
+  } else if (screen.name === 'play') {
     content = html`
-      <${Quiz}
-        key=${screen.round}
-        config=${config}
-        autoAdvance=${settings.autoAdvance}
-        onFinish=${(outcome) => setScreen({ name: 'summary', ...outcome })}
-        onQuit=${() => setScreen({ name: 'home' })}
+      <${Play}
+        key=${screen.session.id}
+        session=${screen.session}
+        initialNext=${screen.next}
+        onFinished=${(summary) => setScreen({ name: 'summary', summary, session: screen.session })}
+        onStartSession=${(kind) => startSession(kind)}
       />
     `;
   } else if (screen.name === 'summary') {
     content = html`
-      <${Summary}
-        results=${screen.results}
-        saveFailed=${screen.saveFailed}
-        onPlayAgain=${() => startRound(config)}
-        onHome=${() => setScreen({ name: 'home' })}
+      <${PlaySummary}
+        summary=${screen.summary}
+        onKeepGoing=${() => startSession(screen.session.kind, screen.session.length)}
+        onDone=${() => setScreen({ name: 'home' })}
       />
     `;
   } else if (screen.name === 'progress') {
@@ -123,6 +128,7 @@ function App() {
     content = html`
       <${Settings}
         settings=${settings}
+        modes=${catalog.modes}
         generations=${catalog.generations}
         themes=${themes}
         username=${user.username}
@@ -131,11 +137,11 @@ function App() {
       />
     `;
   } else {
-    content = html`<${Home} modes=${catalog.modes} generations=${catalog.generations} initialConfig=${config} onStart=${startRound} />`;
+    content = html`<${Home} onPlay=${startSession} onSaveLength=${saveLength} />`;
   }
 
-  // No navigation mid-round, so a stray tap can't throw a round away (Quit is on the quiz screen).
-  const showNav = user && settings && screen.name !== 'quiz';
+  // No navigation mid-session, so a stray tap can't end one (End session is on the play screen).
+  const showNav = user && settings && screen.name !== 'play';
   const navLink = (name, label) => html`
     <button type="button" class=${`nav-link ${screen.name === name ? 'is-current' : ''}`} aria-current=${screen.name === name ? 'page' : undefined} onClick=${() => setScreen({ name })}>
       ${label}

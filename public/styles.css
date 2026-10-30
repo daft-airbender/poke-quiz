@@ -216,16 +216,9 @@ button:focus-visible {
   background: var(--bg);
 }
 
-/* Home: segmented buttons and generation chips */
+/* Generation and length chips */
 
-.segmented {
-  display: flex;
-  gap: 8px;
-}
 
-.segmented.vertical {
-  flex-direction: column;
-}
 
 .mode-group {
   display: flex;
@@ -311,17 +304,7 @@ button:focus-visible {
   font-weight: 600;
 }
 
-.segmented button {
-  flex: 1;
-  background: var(--bg);
-  border: 2px solid transparent;
-  font-weight: 600;
-}
 
-.segmented button.is-selected {
-  border-color: var(--accent-ink);
-  background: var(--accent-soft);
-}
 
 .chips {
   display: flex;
@@ -824,4 +807,147 @@ button.brand {
 
 .matchup-row.start {
   justify-content: flex-start;
+}
+
+/* Home */
+
+.today-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.today-stats > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.play-button {
+  min-height: 64px;
+  font-size: 1.25rem;
+}
+
+/* "25 questions ▾" under Play */
+.length-control {
+  align-self: center;
+  min-height: 40px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.length-group h3 {
+  margin: 0;
+}
+
+/* Play */
+
+.play-tag {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.ratings {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.rating {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 60px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+}
+
+.rating-label {
+  font-weight: 700;
+}
+
+.rating-when {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.rating-good {
+  border-color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.rating:disabled {
+  opacity: 0.6;
+}
+
+.note {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: min(480px, calc(100vw - 32px));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--text);
+  color: var(--card);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.25);
+  z-index: 5;
+}
+
+.toast .link {
+  color: var(--card);
+  font-weight: 700;
+}
+
+/* Settings: What to learn */
+
+.row-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.row-between h3 {
+  margin: 0;
+}
+
+.mode-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.mode-check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent-ink);
+  flex-shrink: 0;
+}
+
+.center-text {
+  text-align: center;
 }

@@ -1,14 +1,12 @@
 import { useState } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { api } from '../api.js';
-import { GenerationChips } from '../components/GenerationChips.js';
 import { Modal } from '../components/Modal.js';
-import { Segmented } from '../components/Segmented.js';
 import { ThemePicker } from '../components/ThemePicker.js';
-import { ROUND_LENGTHS } from './Home.js';
+import { WhatToLearn } from '../components/WhatToLearn.js';
 
 // Saved to the server, so they follow me to every device. Defaults live on the server (src/routes/settings.js).
-export function Settings({ settings, generations, themes, username, onSaved, onLogout }) {
+export function Settings({ settings, modes, generations, themes, username, onSaved, onLogout }) {
   const [draft, setDraft] = useState(settings);
   const [status, setStatus] = useState(''); // '' | 'saving' | 'saved'
   const [error, setError] = useState('');
@@ -23,7 +21,8 @@ export function Settings({ settings, generations, themes, username, onSaved, onL
     setError('');
     setStatus('saving');
     try {
-      const saved = await api('/api/settings', { method: 'PUT', body: draft });
+      // Only the settings on this screen: others (like the last session length) are saved where they change.
+      const saved = await api('/api/settings', { method: 'PUT', body: { theme: draft.theme, playScope: draft.playScope } });
       setDraft(saved);
       setStatus('saved');
       onSaved(saved);
@@ -36,27 +35,11 @@ export function Settings({ settings, generations, themes, username, onSaved, onL
   return html`
     <form class="stack" onSubmit=${save}>
       <section class="card stack">
-        <h2>Default round length</h2>
-        <${Segmented}
-          options=${ROUND_LENGTHS.map((count) => ({ value: count, label: String(count) }))}
-          value=${draft.roundLength}
-          onChange=${(roundLength) => update({ roundLength })}
-        />
-      </section>
-
-      <section class="card stack">
-        <h2>Default generations</h2>
-        <${GenerationChips} generations=${generations} selected=${draft.gens} onChange=${(gens) => update({ gens })} />
-      </section>
-
-      <section class="card">
-        <label class="toggle">
-          <span>
-            <strong>Auto-advance</strong>
-            <span class="small muted">Go to the next question right after a correct answer</span>
-          </span>
-          <input type="checkbox" checked=${draft.autoAdvance} onChange=${(e) => update({ autoAdvance: e.currentTarget.checked })} />
-        </label>
+        <div>
+          <h2>What to learn</h2>
+          <p class="small muted">New cards in Play come only from what's checked here. Cards you've already started keep coming back for review either way.</p>
+        </div>
+        <${WhatToLearn} modes=${modes} generations=${generations} scope=${draft.playScope} onChange=${(playScope) => update({ playScope })} />
       </section>
 
       <section class="card stack">
@@ -75,7 +58,7 @@ export function Settings({ settings, generations, themes, username, onSaved, onL
       </section>
 
       ${error && html`<p class="error" role="alert">${error}</p>`}
-      <button type="submit" class="primary full large" disabled=${status === 'saving' || !themeValid}>
+      <button type="submit" class="primary full large" disabled=${status === 'saving' || !themeValid || draft.playScope.modes?.length === 0}>
         ${status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved ✓' : 'Save'}
       </button>
 

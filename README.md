@@ -4,7 +4,7 @@ A personal web app for quizzing myself on Pokémon names, types, and type matchu
 
 - **Server:** Node.js + Express 5
 - **Frontend:** Preact + htm, served as plain ES modules (no build step)
-- **Database:** Postgres on Neon (Drizzle ORM), coming in milestone 3
+- **Database:** Postgres on Neon (Drizzle ORM)
 - **Hosting:** Render free web service
 
 Design docs live in [`_design_docs/`](_design_docs/): the [plan and milestones](_design_docs/pokemon-quiz-plan.md), the [quiz modes](_design_docs/modes-v1.md), and the [spaced-repetition spec](_design_docs/pokemon-quiz-srs-spec.md).
@@ -66,23 +66,25 @@ Modes are pluggable. Each is one file in `src/quiz/modes/` exporting:
 
 Typed names are matched by `shared/nameMatch.js`, which the server and the browser both import (served at `/shared/`): case, accents, spaces and punctuation are ignored; a close typo asks to double-check spelling, up to 3 times; another Pokémon's name is always wrong.
 
-To add a mode, create the file and list it in `src/quiz/modes/index.js`. `src/quiz/generateRound.js` picks which candidates go into a round for every mode.
+To add a mode, create the file and list it in `src/quiz/modes/index.js`. Its questions become spaced-repetition cards on the next `npm run db:migrate` (the catalog sync).
 
-## Progress and settings
+## Playing
 
-- Every answer updates a per-question progress row; every finished round is saved to the history. Quitting mid-round keeps the answers but doesn't record the round.
-- Rounds favor new and recently missed questions. A question answered correctly rests for 1, 2, 4, 8… days (doubling with each correct answer in a row) before it's likely to come up again. See `src/quiz/weighting.js`.
+- **Play** (Home) runs a spaced-repetition session: the server picks every card (due learning steps, due reviews and bank check-ins, then new cards up to 20 a day, then "working ahead"). Wrong answers are saved as Again right away; a right answer is rated Hard / Good / Easy (keys 2 / 3 / 4, Enter = Good), each button showing when the card comes back. Missed cards get one wrap-up showing before a session ends; End session (Esc) offers "Review N missed cards" or "End now".
+- The session length (10/25/50 questions, 5/10/20 minutes, Endless) is remembered; the "25 questions ▾" control under Play changes it.
+- **Settings → What to learn** picks which modes and generations new cards come from. Cards already started keep coming back for review.
+- **Progress** shows card counts per tier and recent sessions; the charts come in a later phase.
 - **Theme:** Settings → Theme takes a Pokédex number and colors the app after that Pokémon. `public/themeColors.js` turns its palette into the CSS tokens (`--accent` fill, `--accent-ink` for text/borders, `--accent-soft`, `--bg`), adjusting lightness so every theme stays readable in light and dark mode (a test checks all 1,025). Right/wrong colors and type badges never change. The computed theme is cached in the device's localStorage so `index.html` applies it before the first paint.
-- Settings (default round length, default generations, auto-advance, theme) are stored on the server, so they sync across devices. Defaults and validation live in `src/routes/settings.js`.
-- **Reset all progress** (bottom of Settings, after a confirmation) deletes every per-user progress/history table in one transaction, keeping the login and settings. The list of tables is `USER_DATA_TABLES` in `src/db/userData.js`; a test fails if a table with a `user_id` column is missing from it, so new tables (e.g. the SRS ones) can't be forgotten.
+- Settings (theme, What to learn, last session length) are stored on the server, so they sync across devices. Defaults and validation live in `src/routes/settings.js`.
+- **Reset all progress** (bottom of Settings, after a confirmation) deletes every per-user progress/history table in one transaction, keeping the login and settings. The list of tables is `USER_DATA_TABLES` in `src/db/userData.js`; a test fails if a table with a `user_id` column is missing from it, so new tables can't be forgotten.
 
-## Spaced repetition (in progress)
+## Spaced repetition
 
-Being built in phases from [`_design_docs/pokemon-quiz-srs-spec.md`](_design_docs/pokemon-quiz-srs-spec.md); not wired into the app yet.
+Built in phases from [`_design_docs/pokemon-quiz-srs-spec.md`](_design_docs/pokemon-quiz-srs-spec.md). Play is live (S5); Free Play, the Bank/Mastered screens and the full Progress screen are next.
 
 - `src/srs/config.js`: every SRS setting in one object (retention, learning steps, new cards per day, bank and mastery rules, …).
-- **Tables** (migration `0001_srs_tables`): `cards` (shared catalog, one row per mode question), `card_state`, `sessions`, `review_log`, `card_events`, `daily_tier_snapshot`. `npm run db:migrate` also syncs `cards` with the mode registry (`src/srs/catalog.js`, `src/db/cards.js`). `review_log` + `card_events` replay to the exact `card_state` (`src/srs/replay.js`).
-- **API** (`src/routes/play.js`, `src/db/srs.js`): start a Play / practice session, get the next card (with the Hard/Good/Easy due-date previews), answer (card state + review log in one transaction; the next card comes back in the same response), undo "Banked!"/"Mastered!", end with a summary, "Add 10 more" new cards. Not wired to the screens yet (S5).
+- **Tables** (migrations `0001_srs_tables`, `0002_retire_pre_srs_tables`): `cards` (shared catalog, one row per mode question), `card_state`, `sessions`, `review_log`, `card_events`, `daily_tier_snapshot`. `npm run db:migrate` also syncs `cards` with the mode registry (`src/srs/catalog.js`, `src/db/cards.js`). `review_log` + `card_events` replay to the exact `card_state` (`src/srs/replay.js`).
+- **API** (`src/routes/play.js`, `src/db/srs.js`): start a Play / practice session, get the next card (with the Hard/Good/Easy due-date previews), answer (card state + review log in one transaction; the next card comes back in the same response), undo "Banked!"/"Mastered!", end with a summary, "Add 10 more" new cards.
 - `src/srs/tiers.js`, `review.js`, `queue.js`, `session.js`, `days.js`: the spec's tier, queue and session rules as pure functions (no database yet). The plan doc lists the interpretation choices made where the spec left room.
 - `src/srs/scheduler.js`: a pure wrapper around [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs) 5.4.2 (FSRS-6): `answer(card, rating, now)`, `preview(card, now)`, `retrievability(card, now)`. The rest of the app uses its card shape, never ts-fsrs types. Fuzz is seeded from the review time and card state, so replaying a card's history reproduces its due dates.
 

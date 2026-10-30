@@ -7,16 +7,10 @@ import { GENERATIONS, POKEMON_BY_ID } from '../quiz/pokemon.js';
 import { parseSessionLength } from '../srs/session.js';
 import { badRequest } from './errors.js';
 
-export const ROUND_LENGTHS = [10, 20, 30];
-
 // The one place settings defaults live. Stored settings are merged over these,
 // so adding a setting is: a default here, a validator below, and a control on the settings screen.
 export const DEFAULT_SETTINGS = {
-  roundLength: 10,
-  gens: [], // [] = all generations
-  autoAdvance: false,
   theme: null, // a Pokédex number whose colors theme the app; null = the default red
-  // Spaced repetition:
   playScope: { modes: null, gens: null }, // "What to learn": which modes / generations new cards come from; null = all
   lastLength: { play: null, free_play: null }, // last session length used, per kind; null = the default
   newCardsExtra: { day: null, count: 0 }, // "Add 10 more" new cards: how many extra, for which New York day
@@ -30,9 +24,6 @@ const isListOrNull = (value, allowed) =>
 
 // One check per known key.
 const VALIDATORS = {
-  roundLength: (value) => ROUND_LENGTHS.includes(value),
-  gens: (value) => Array.isArray(value) && value.every((gen) => GENERATIONS.includes(gen)) && new Set(value).size === value.length,
-  autoAdvance: (value) => typeof value === 'boolean',
   theme: (value) => value === null || (Number.isInteger(value) && POKEMON_BY_ID.has(value)),
   playScope: (value) => isPlainObject(value) && isListOrNull(value.modes, MODE_IDS) && isListOrNull(value.gens, GENERATIONS),
   // A kind not used yet may be missing or null.
@@ -60,10 +51,16 @@ export function parseSettingsUpdate(body) {
     if (!isValid(body[key])) throw badRequest(`Invalid value for ${key}`);
     update[key] = body[key];
   }
-  if (update.gens) {
-    update.gens = [...update.gens].sort((a, b) => a - b);
-    // Every generation selected means "all".
-    if (update.gens.length === GENERATIONS.length) update.gens = [];
+  if (update.playScope) {
+    // Sorted, and "every mode" / "every generation" stored as null (= all), so modes or generations
+    // added later are included automatically.
+    const { modes, gens } = update.playScope;
+    const sortedModes = modes && MODE_IDS.filter((id) => modes.includes(id));
+    const sortedGens = gens && [...gens].sort((a, b) => a - b);
+    update.playScope = {
+      modes: sortedModes && sortedModes.length < MODE_IDS.length ? sortedModes : null,
+      gens: sortedGens && sortedGens.length < GENERATIONS.length ? sortedGens : null,
+    };
   }
   return update;
 }

@@ -33,8 +33,8 @@ test('/api/me without a session is 401', async () => {
 
 test('protected /api routes without a session are 401', async () => {
   for (const [method, path] of [
-    ['GET', '/api/quiz'],
-    ['POST', '/api/quiz/answer'],
+    ['GET', '/api/play/overview'],
+    ['POST', '/api/play/sessions'],
     ['GET', '/api/progress/summary'],
     ['GET', '/api/settings'],
     ['POST', '/api/logout'],

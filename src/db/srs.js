@@ -5,7 +5,7 @@
 // the few candidates each queue tier needs; the pure queue (src/srs/queue.js) then makes the final pick
 // with the exact library values.
 import { and, asc, desc, eq, gt, inArray, sql } from 'drizzle-orm';
-import { listModes } from '../quiz/modes/index.js';
+import { getMode, listModes } from '../quiz/modes/index.js';
 import { questionForCard } from '../srs/catalog.js';
 import { SRS_CONFIG } from '../srs/config.js';
 import { addDays, dayKey } from '../srs/days.js';
@@ -13,7 +13,7 @@ import { inPlayScope, newCardsLeft, orderNewCards, pickNextCard, pickPracticeCar
 import { reviewCard } from '../srs/review.js';
 import { cardFromRow, rowFromCard, tierSnapshotFromJson } from '../srs/rows.js';
 import { newCardMemory } from '../srs/scheduler.js';
-import { nextStep, progressLabel, summarize } from '../srs/session.js';
+import { nextStep, progressLabel, summarize, wrapUpCards } from '../srs/session.js';
 import { newTierFields } from '../srs/tiers.js';
 import { cardEvents, cards, cardState, dailyTierSnapshot, reviewLog, sessions, users } from './schema.js';
 
@@ -249,7 +249,12 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
     answers: answers.map((a) => ({ cardId: a.cardId, correct: a.rating > 1, at: a.at, isWrapup: a.isWrapup })),
     endRequested: ending,
   };
-  const progress = { label: progressLabel(state, now), answered: answers.length, dueNow: await dueCount(db, userId, now, scheduler) };
+  const progress = {
+    label: progressLabel(state, now),
+    answered: answers.length,
+    dueNow: await dueCount(db, userId, now, scheduler),
+    wrapUpPending: wrapUpCards(state).length, // for "Review N missed cards" on End session
+  };
   if (session.endedAt) return { step: 'done', progress };
 
   const step = nextStep(state, now);
@@ -288,6 +293,7 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
   const { card, mode } = picked;
   const memory = card.memory ?? newCardMemory();
   const preview = scheduler.preview(memory, now);
+  const question = questionForCard(card.promptKey);
   return {
     step: 'question',
     card: {
@@ -297,7 +303,9 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
       waitMs,
       tier: card.tier ?? 'rotation',
       pastNewLimit,
-      question: questionForCard(card.promptKey),
+      // What to call the card in messages like "Banked! Pikachu" (the question itself may hide the name).
+      title: getMode(question.mode).describe(card.promptKey)?.title ?? '',
+      question,
       // When the card would be due again after each rating (ISO), for "10m / 2d / 6d"; serverNow avoids clock skew.
       preview: Object.fromEntries(Object.entries(preview).map(([rating, due]) => [rating, due.toISOString()])),
       serverNow: now.toISOString(),

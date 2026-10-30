@@ -1,76 +1,56 @@
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { getDb } from '../db/client.js';
-import { progress, quizSessions } from '../db/schema.js';
+import { cards, reviewLog, sessions } from '../db/schema.js';
 import { deleteUserData } from '../db/userData.js';
-import { getMode, listModes } from '../quiz/modes/index.js';
+import { playOverview } from '../db/srs.js';
+import { createScheduler } from '../srs/scheduler.js';
 import { badRequest } from './errors.js';
 
-const WEAKEST_PER_MODE = 10;
 const RECENT_SESSIONS = 10;
+const scheduler = createScheduler();
 
 export function progressRouter() {
   const router = Router();
 
-  // { modes: [{ id, label, answerType, totalItems, itemsSeen, answers, correct, weakest[] }], recentSessions[] }
+  // A simple overview until the full Progress screen (SRS phase S8):
+  // { tiers: { unseen, rotation, bank, mastered }, dueNow, newLeft, recentSessions: [{ kind, startedAt, answered, correct }] }
   router.get('/progress/summary', async (req, res) => {
     const db = getDb();
-    const [totals, weakest, recentSessions] = await Promise.all([
+    const [overview, activeCards, recent] = await Promise.all([
+      playOverview(db, req.userId, new Date(), scheduler),
+      db.$count(cards, eq(cards.active, true)),
       db
-        .select({
-          mode: progress.mode,
-          itemsSeen: sql`count(*)`.mapWith(Number),
-          answers: sql`sum(${progress.timesSeen})`.mapWith(Number),
-          correct: sql`sum(${progress.timesCorrect})`.mapWith(Number),
-        })
-        .from(progress)
-        .where(eq(progress.userId, req.userId))
-        .groupBy(progress.mode),
-
-      // Per mode: questions missed at least once, lowest accuracy first, then most often seen.
-      db.execute(sql`
-        select mode, question_key, times_seen, times_correct
-        from (
-          select mode, question_key, times_seen, times_correct,
-            row_number() over (
-              partition by mode
-              order by times_correct::float / times_seen, times_seen desc, last_seen_at desc
-            ) as rank
-          from ${progress}
-          where ${progress.userId} = ${req.userId} and ${progress.timesCorrect} < ${progress.timesSeen}
-        ) ranked
-        where rank <= ${WEAKEST_PER_MODE}
-        order by rank
-      `),
-
-      db
-        .select({ mode: quizSessions.mode, total: quizSessions.total, correct: quizSessions.correct, finishedAt: quizSessions.finishedAt })
-        .from(quizSessions)
-        .where(eq(quizSessions.userId, req.userId))
-        .orderBy(desc(quizSessions.finishedAt))
+        .select({ id: sessions.id, kind: sessions.kind, startedAt: sessions.startedAt, lengthType: sessions.lengthType, lengthValue: sessions.lengthValue })
+        .from(sessions)
+        .where(and(eq(sessions.userId, req.userId), sql`exists (select 1 from ${reviewLog} where ${reviewLog.sessionId} = ${sessions.id})`))
+        .orderBy(desc(sessions.startedAt))
         .limit(RECENT_SESSIONS),
     ]);
-
-    const totalsByMode = new Map(totals.map((row) => [row.mode, row]));
-    const modes = listModes().map(({ description, example, allGenerations, allGenerationsNote, ...mode }) => ({
-      ...mode,
-      totalItems: mode.totalQuestions,
-      itemsSeen: totalsByMode.get(mode.id)?.itemsSeen ?? 0,
-      answers: totalsByMode.get(mode.id)?.answers ?? 0,
-      correct: totalsByMode.get(mode.id)?.correct ?? 0,
-      weakest: weakest.rows
-        .filter((row) => row.mode === mode.id)
-        .map((row) => ({
-          questionKey: row.question_key,
-          timesSeen: row.times_seen,
-          timesCorrect: row.times_correct,
-          ...getMode(mode.id).describe(row.question_key),
-        }))
-        // Keys a mode no longer recognizes (e.g. after a data change) have no title.
-        .filter((item) => item.title),
-    }));
-
-    res.json({ modes, recentSessions });
+    const counts = recent.length
+      ? await db
+          .select({
+            sessionId: reviewLog.sessionId,
+            answered: sql`count(*)`.mapWith(Number),
+            correct: sql`count(*) filter (where ${reviewLog.rating} > 1)`.mapWith(Number),
+          })
+          .from(reviewLog)
+          .where(inArray(reviewLog.sessionId, recent.map((s) => s.id)))
+          .groupBy(reviewLog.sessionId)
+      : [];
+    const bySession = new Map(counts.map((c) => [c.sessionId, c]));
+    const studied = overview.rotation + overview.bank + overview.mastered;
+    res.json({
+      tiers: { unseen: Math.max(0, activeCards - studied), rotation: overview.rotation, bank: overview.bank, mastered: overview.mastered },
+      dueNow: overview.dueNow,
+      newLeft: overview.newLeft,
+      recentSessions: recent.map((s) => ({
+        kind: s.kind,
+        startedAt: s.startedAt,
+        answered: bySession.get(s.id)?.answered ?? 0,
+        correct: bySession.get(s.id)?.correct ?? 0,
+      })),
+    });
   });
 
   // Deletes all of my progress and history (not my login or settings). Irreversible, so the body
