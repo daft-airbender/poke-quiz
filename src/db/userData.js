@@ -6,7 +6,17 @@ import * as schema from './schema.js';
 // from each of these; the login itself (users) and its settings are kept.
 // Rows are deleted in this order, so list tables that reference others first.
 // Adding a table with a user_id column? List it here: test/userData.test.js fails until you do.
-export const USER_DATA_TABLES = [schema.progress, schema.quizSessions];
+export const USER_DATA_TABLES = [
+  // Spaced repetition: logs first (review_log points at sessions).
+  schema.reviewLog,
+  schema.cardEvents,
+  schema.cardState,
+  schema.dailyTierSnapshot,
+  schema.sessions,
+  // Pre-SRS system.
+  schema.progress,
+  schema.quizSessions,
+];
 
 // Tables (other than users) that have a userId column, found from the schema itself.
 export function tablesWithUserId() {

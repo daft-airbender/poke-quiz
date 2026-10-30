@@ -33,7 +33,7 @@ Health check: `curl http://localhost:3000/healthz` returns `ok`.
 | `npm run fetch:pokemon` | Rebuild `data/pokemon.json` from PokéAPI (one-off; responses cached in `.cache/`) |
 | `npm run build:palettes` | Rebuild `data/pokemon-palettes.json` (theme colors) from the sprites (one-off; sprites cached in `.cache/sprites/`) |
 | `npm run db:generate` | Generate a SQL migration in `drizzle/` from `src/db/schema.js` (no DB needed) |
-| `npm run db:migrate` | Apply pending migrations (uses `DATABASE_URL_UNPOOLED` if set, else `DATABASE_URL`) |
+| `npm run db:migrate` | Apply pending migrations (uses `DATABASE_URL_UNPOOLED` if set, else `DATABASE_URL`), then sync the SRS card catalog |
 | `npm run create-user <name>` | Create a login in the dev database (prompts for the password, hidden) |
 
 ## Accounts
@@ -81,6 +81,7 @@ To add a mode, create the file and list it in `src/quiz/modes/index.js`. `src/qu
 Being built in phases from [`_design_docs/pokemon-quiz-srs-spec.md`](_design_docs/pokemon-quiz-srs-spec.md); not wired into the app yet.
 
 - `src/srs/config.js`: every SRS setting in one object (retention, learning steps, new cards per day, bank and mastery rules, …).
+- **Tables** (migration `0001_srs_tables`): `cards` (shared catalog, one row per mode question), `card_state`, `sessions`, `review_log`, `card_events`, `daily_tier_snapshot`. `npm run db:migrate` also syncs `cards` with the mode registry (`src/srs/catalog.js`, `src/db/cards.js`). `review_log` + `card_events` replay to the exact `card_state` (`src/srs/replay.js`).
 - `src/srs/tiers.js`, `review.js`, `queue.js`, `session.js`, `days.js`: the spec's tier, queue and session rules as pure functions (no database yet). The plan doc lists the interpretation choices made where the spec left room.
 - `src/srs/scheduler.js`: a pure wrapper around [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs) 5.4.2 (FSRS-6): `answer(card, rating, now)`, `preview(card, now)`, `retrievability(card, now)`. The rest of the app uses its card shape, never ts-fsrs types. Fuzz is seeded from the review time and card state, so replaying a card's history reproduces its due dates.
 
