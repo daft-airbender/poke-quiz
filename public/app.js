@@ -3,6 +3,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { api, onSlowChange, onUnauthorized } from './api.js';
 import { Spinner, WakeUpOverlay } from './components/Loader.js';
+import { CardsIcon, ProgressIcon, SettingsIcon } from './components/NavIcons.js';
 import { Cards } from './screens/Cards.js';
 import { FreePlaySetup } from './screens/FreePlaySetup.js';
 import { Home } from './screens/Home.js';
@@ -172,16 +173,25 @@ function App() {
 
   // No navigation mid-session, so a stray tap can't end one (End session is on the play screen).
   const showNav = user && settings && screen.name !== 'play';
-  const navLink = (name, label) => html`
-    <button type="button" class=${`nav-link ${screen.name === name ? 'is-current' : ''}`} aria-current=${screen.name === name ? 'page' : undefined} onClick=${() => setScreen({ name })}>
-      ${label}
+  // Icon buttons; the name is there for screen readers (and as a hover tooltip on desktop).
+  const navLink = (name, label, Icon) => html`
+    <button
+      type="button"
+      class=${`nav-link ${screen.name === name ? 'is-current' : ''}`}
+      aria-current=${screen.name === name ? 'page' : undefined}
+      title=${label}
+      onClick=${() => setScreen({ name })}
+    >
+      <${Icon} />
+      <span class="visually-hidden">${label}</span>
     </button>
   `;
+
 
   return html`
     <header class="app-header">
       ${showNav ? html`<button type="button" class="brand" onClick=${() => setScreen({ name: 'home' })}>Poké Quiz</button>` : html`<span class="brand">Poké Quiz</span>`}
-      ${showNav && html`<nav class="nav">${navLink('cards', 'Cards')}${navLink('progress', 'Progress')}${navLink('settings', 'Settings')}</nav>`}
+      ${showNav && html`<nav class="nav">${navLink('cards', 'Cards', CardsIcon)}${navLink('progress', 'Progress', ProgressIcon)}${navLink('settings', 'Settings', SettingsIcon)}</nav>`}
     </header>
     ${content}
     ${waking && html`<${WakeUpOverlay} />`}
