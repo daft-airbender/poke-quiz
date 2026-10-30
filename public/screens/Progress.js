@@ -20,8 +20,8 @@ export function Progress({ onHome }) {
     try {
       const data = await api('/api/progress/summary');
       setSummary(data);
-      // Start the weakest list on the first mode that has something in it.
-      setWeakMode((data.modes.find((m) => m.weakest.length) ?? data.modes[0]).id);
+      // Start the most-missed list on the first mode that has something in it.
+      setWeakMode(data.modes.find((m) => m.weakest.length)?.id ?? null);
     } catch (err) {
       setError(err.message);
     }
@@ -42,7 +42,9 @@ export function Progress({ onHome }) {
   if (!summary) return html`<main class="card"><${Spinner} label="Loading progress…" /></main>`;
 
   const labels = new Map(summary.modes.map((m) => [m.id, m.label]));
-  const selected = summary.modes.find((m) => m.id === weakMode);
+  // Only modes with at least one miss get a chip.
+  const missedModes = summary.modes.filter((m) => m.weakest.length > 0);
+  const selected = missedModes.find((m) => m.id === weakMode);
 
   return html`
     <main class="stack">
@@ -66,27 +68,31 @@ export function Progress({ onHome }) {
       </section>
 
       <section class="card stack">
-        <h2>Weakest</h2>
-        <div class="chips">
-          ${summary.modes.map(
-            (mode) => html`
-              <button
-                key=${mode.id}
-                type="button"
-                class=${`chip ${mode.id === weakMode ? 'is-selected' : ''}`}
-                aria-pressed=${mode.id === weakMode}
-                onClick=${() => setWeakMode(mode.id)}
-              >
-                ${mode.label}${mode.weakest.length > 0 && html` <span class="muted">${mode.weakest.length}</span>`}
-              </button>
-            `,
-          )}
+        <div>
+          <h2>Most missed</h2>
+          <p class="muted small">Questions you get wrong most often, per mode.</p>
         </div>
-        ${selected.weakest.length === 0
-          ? html`<p class="muted">Nothing missed yet in ${selected.label}.</p>`
-          : html`<ul class="missed-list">
-              ${selected.weakest.map((item) => html`<${WeakItem} key=${item.questionKey} item=${item} answerType=${selected.answerType} />`)}
-            </ul>`}
+        ${missedModes.length === 0
+          ? html`<p class="muted">Nothing missed yet. Questions you get wrong will show up here.</p>`
+          : html`<div class="chips">
+              ${missedModes.map(
+                (mode) => html`
+                  <button
+                    key=${mode.id}
+                    type="button"
+                    class=${`chip ${mode.id === weakMode ? 'is-selected' : ''}`}
+                    aria-pressed=${mode.id === weakMode}
+                    onClick=${() => setWeakMode(mode.id)}
+                  >
+                    ${mode.label} <span class="muted">${mode.weakest.length}</span>
+                  </button>
+                `,
+              )}
+            </div>`}
+        ${selected &&
+        html`<ul class="missed-list">
+          ${selected.weakest.map((item) => html`<${WeakItem} key=${item.questionKey} item=${item} answerType=${selected.answerType} />`)}
+        </ul>`}
       </section>
 
       <section class="card stack">
