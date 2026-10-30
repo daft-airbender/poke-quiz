@@ -184,18 +184,18 @@ async function playCandidates(db, userId, now, scheduler, settings) {
       .limit(limit),
     studiedQuery(db, userId)
       .where(and(eq(cardState.userId, userId), rotation, eq(cardState.fsrsState, 'review'), sql`${cardState.dueAt} <= ${now}`))
-      .orderBy(r)
+      .orderBy(r, sql`random()`) // ties (same R) in random order, not card id order
       .limit(limit),
     studiedQuery(db, userId)
       .where(and(eq(cardState.userId, userId), eq(cardState.tier, 'bank'), sql`${r} < ${SRS_CONFIG.bank.checkInBelowRetrievability + CHECK_IN_MARGIN}`))
-      .orderBy(r)
+      .orderBy(r, sql`random()`) // ties (same R) in random order, not card id order
       .limit(limit),
     studiedQuery(db, userId)
       .where(and(eq(cardState.userId, userId), eq(cardState.tier, 'bank')))
       .limit(1),
     studiedQuery(db, userId)
       .where(and(eq(cardState.userId, userId), rotation, sql`${cardState.fsrsState} <> 'new'`))
-      .orderBy(r)
+      .orderBy(r, sql`random()`) // ties (same R) in random order, not card id order
       .limit(limit),
   ]);
   const byId = new Map([...steps, ...dueReviews, ...checkIns, ...anyBank, ...ahead].map((row) => [row.state.cardId, toStudied(row)]));
@@ -305,7 +305,7 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
       // Bank practice: cards whose answer would count toward Mastered today first (see pickPracticeCard).
       const rows = await studiedQuery(db, userId)
         .where(and(eq(cardState.userId, userId), eq(cardState.tier, tier)))
-        .orderBy(sql`(case when ${bankCountsTodaySql(now)} then 0 else 1 end)`, retrievabilitySql(scheduler.curve, now))
+        .orderBy(sql`(case when ${bankCountsTodaySql(now)} then 0 else 1 end)`, retrievabilitySql(scheduler.curve, now), sql`random()`)
         .limit(CANDIDATES_PER_TIER);
       picked = pickPracticeCard({ studied: rows.map(toStudied), tier, recent, now, scheduler });
       if (!picked.card) return { step: 'empty', canAddNew: false, canPracticeBank: false, progress };
@@ -315,6 +315,8 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
       picked = pickNextCard({ ...candidates, recent, now, scheduler });
       if (!picked.card) return { step: 'empty', canAddNew: picked.canAddNew, canPracticeBank: picked.canPracticeBank, progress };
       pastNewLimit = picked.mode === 'new' && candidates.newToday.introducedToday >= SRS_CONFIG.newCardsPerDay;
+      // Working ahead because today's new cards are used up (not because there are none left): say so, and offer more.
+      progress.newCardsUsedUp = picked.mode === 'ahead' && newCardsLeft(candidates.newToday) === 0;
     }
   }
 

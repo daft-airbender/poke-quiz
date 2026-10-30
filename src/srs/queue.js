@@ -77,10 +77,12 @@ function shownLongestAgo(cards, recent) {
 // studied:  cards answered at least once: [{ id, tier, memory, ... }]
 // newCards: unseen cards in scope, already in introduction order (orderNewCards)
 // Returns { card, mode } or { card: null, canAddNew, canPracticeBank }.
-export function pickNextCard({ studied, newCards, recent, now, scheduler, newToday, config = SRS_CONFIG }) {
+export function pickNextCard({ studied, newCards, recent, now, scheduler, newToday, config = SRS_CONFIG, random = Math.random }) {
   const r = (card) => scheduler.retrievability(card.memory, now);
   const cooling = (card) => inCooldown(card.id, recent, now, config);
-  const lowestR = (cards) => cards.map((card) => ({ card, r: r(card) })).sort((a, b) => a.r - b.r)[0]?.card;
+  // Lowest R first; ties (common: R counts whole days, so everything studied today is at 100%) in random order,
+  // not catalog order.
+  const lowestR = (cards) => cards.map((card) => ({ card, r: r(card), tie: random() })).sort((a, b) => a.r - b.r || a.tie - b.tie)[0]?.card;
   const rotation = studied.filter((card) => card.tier === 'rotation');
 
   // 1. Due learning steps: these are exempt from the cooldown.

@@ -176,3 +176,12 @@ test('bank practice puts cards whose answer would count toward Mastered first', 
   assert.equal(pickPracticeCard({ studied: [tooSoon, countable], tier: 'bank', recent: [], now: NOW, scheduler }).card.id, 'ready');
   assert.equal(pickPracticeCard({ studied: [tooSoon], tier: 'bank', recent: [], now: NOW, scheduler }).card.id, 'soon', 'the rest still get practiced');
 });
+
+test('cards tied on recall come in random order, not catalog order', () => {
+  // Five cards all studied today: R is 100% for each (whole days), so it's a tie.
+  const today = Array.from({ length: 5 }, (_, i) => card(`c${i + 1}`, { stability: 2, lastReviewDaysAgo: 0, dueInMs: DAY }));
+  let seed = 11;
+  const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const firsts = new Set(Array.from({ length: 12 }, () => pickNextCard({ studied: today, newCards: [], recent: [], now: NOW, scheduler, newToday: { introducedToday: 20 }, random }).card.id));
+  assert.ok(firsts.size > 2, `different first picks: ${[...firsts].join(' ')}`);
+});

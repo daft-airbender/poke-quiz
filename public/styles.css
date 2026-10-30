@@ -1473,3 +1473,11 @@ button.brand {
   outline: 3px solid var(--accent-ink);
   outline-offset: 3px;
 }
+
+.note.row-between {
+  gap: 12px;
+}
+
+.note .link {
+  flex-shrink: 0;
+}

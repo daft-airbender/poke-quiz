@@ -266,6 +266,13 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
       <section class="card stack">
         ${card.pastNewLimit &&
         html`<p class="note small">You're past today's new cards. More new cards today means more reviews in the coming weeks.</p>`}
+        ${next.progress.newCardsUsedUp &&
+        html`
+          <div class="note small row-between">
+            <span>Today's new cards are done, so you're reviewing cards you know, ahead of schedule.</span>
+            <button type="button" class="link small" disabled=${busy} onClick=${addMoreNew}>Add 10 more new cards</button>
+          </div>
+        `}
         <${QuestionView} question=${card.question} />
         <${answerType.Input}
           key=${`${card.id}-${next.progress.answered}`}
