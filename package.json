@@ -5,7 +5,7 @@
   "description": "Personal Pokémon quiz app: names, types, and type matchups.",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=26"
   },
   "scripts": {
     "dev": "node --watch --env-file-if-exists=.env src/server.js",
@@ -15,6 +15,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env scripts/migrate.js",
     "create-user": "node --env-file=.env scripts/create-user.js",
+    "create-user:prod": "node --env-file=.env.production scripts/create-user.js",
     "rebuild:snapshots": "node --env-file-if-exists=.env scripts/rebuild-snapshots.js",
     "test": "node --test"
   },

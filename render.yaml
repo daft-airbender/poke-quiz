@@ -1,0 +1,25 @@
+# Render Blueprint: one free web service (see README → Deployment).
+# Render reads this file when you create a Blueprint from the repo, then redeploys on every push to main.
+services:
+  - type: web
+    name: poke-quiz
+    runtime: node
+    plan: free
+    region: virginia # next to the Neon project (AWS us-east-1)
+    branch: main
+    autoDeploy: true
+    # Free services have no pre-deploy step, so migrations (and the card catalog sync) run in the build.
+    buildCommand: npm ci && npm run db:migrate
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Neon poke-quiz-prod: the pooled connection string (host contains -pooler)...
+      - key: DATABASE_URL
+        sync: false
+      # ...and the direct one, which migrations use.
+      - key: DATABASE_URL_UNPOOLED
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
