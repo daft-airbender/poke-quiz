@@ -784,7 +784,7 @@ button.brand {
 .theme-picker {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
 .theme-number input {
@@ -1387,5 +1387,32 @@ button.brand {
 }
 
 .select-buttons .chip:disabled {
+  opacity: 0.45;
+}
+
+/* Theme picker: ▼ / ▲ next to the number */
+.stepper {
+  display: flex;
+  gap: 4px;
+}
+
+.stepper button {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--accent-ink);
+}
+
+/* Same width whatever the name, so stepping doesn't make the row jump. */
+.theme-preview {
+  flex: 1;
+}
+
+.row-between .chip:disabled {
   opacity: 0.45;
 }

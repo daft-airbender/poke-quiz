@@ -43,10 +43,6 @@ export function Settings({ settings, modes, generations, themes, username, onSav
       </section>
 
       <section class="card stack">
-        <div>
-          <h2>Theme</h2>
-          <p class="small muted">Color the app after any Pokémon: enter its Pokédex number.</p>
-        </div>
         <${ThemePicker}
           value=${draft.theme}
           themes=${themes}
