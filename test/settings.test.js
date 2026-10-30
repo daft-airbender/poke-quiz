@@ -13,10 +13,11 @@ test('parseSettingsUpdate keeps known keys and ignores unknown ones', () => {
   assert.deepEqual(parseSettingsUpdate({}), {});
 });
 
-test('theme is a Pokédex number or null', () => {
+test('theme is a Pokédex number, #1 Bulbasaur by default', () => {
   assert.deepEqual(parseSettingsUpdate({ theme: 257 }), { theme: 257 });
-  assert.deepEqual(parseSettingsUpdate({ theme: null }), { theme: null });
-  assert.equal(withDefaults({}).theme, null);
+  assert.equal(withDefaults({}).theme, 1);
+  assert.equal(withDefaults({ theme: null }).theme, 1, 'an old "no theme" falls back to the default');
+  assert.throws(() => parseSettingsUpdate({ theme: null }), { status: 400 });
 });
 
 test('Play scope is sorted, and "everything selected" is stored as null (all)', () => {

@@ -10,7 +10,7 @@ import { badRequest } from './errors.js';
 // The one place settings defaults live. Stored settings are merged over these,
 // so adding a setting is: a default here, a validator below, and a control on the settings screen.
 export const DEFAULT_SETTINGS = {
-  theme: null, // a Pokédex number whose colors theme the app; null = the default red
+  theme: 1, // the Pokédex number whose colors theme the app; #1 Bulbasaur by default
   playScope: { modes: null, gens: null }, // "What to learn": which modes / generations new cards come from; null = all
   lastLength: { play: null, free_play: null }, // last session length used, per kind; null = the default
   newCardsExtra: { day: null, count: 0 }, // "Add 10 more" new cards: how many extra, for which New York day
@@ -44,7 +44,7 @@ export function parseScope(value) {
 
 // One check per known key.
 const VALIDATORS = {
-  theme: (value) => value === null || (Number.isInteger(value) && POKEMON_BY_ID.has(value)),
+  theme: (value) => Number.isInteger(value) && POKEMON_BY_ID.has(value),
   playScope: (value) => isScope(value),
   freePlayFilter: (value) => isScope(value),
   // A kind not used yet may be missing or null.

@@ -1,15 +1,16 @@
 :root {
-  --bg: #f3f4f8;
+  /* --bg and the accent tokens below are the default theme, #1 Bulbasaur (themeVariables() output). */
+  --bg: #dedee2;
   --text: #1d1f27;
   --muted: #6b7080;
   --card: #ffffff;
   --border: #dfe2ea;
   /* Accent tokens: a Pokémon theme replaces these (and --bg) at runtime; see public/themeColors.js.
      --accent is a fill (with --accent-text on it); --accent-ink is for text and borders. */
-  --accent: #dd330c;
-  --accent-text: #ffffff;
-  --accent-ink: #c42c0a;
-  --accent-soft: #fde7e1;
+  --accent: #388f8f;
+  --accent-text: #14161c;
+  --accent-ink: #2a6b6b;
+  --accent-soft: #eef4e1;
   --correct: #1f9d55;
   --correct-soft: #dcf5e6;
   --wrong: #d64545;
@@ -37,15 +38,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #14161c;
+    --bg: #191a20;
     --text: #eceef3;
     --muted: #9aa0b0;
     --card: #1e2129;
     --border: #2f333e;
-    --accent: #ff5a36;
+    --accent: #388f8f;
     --accent-text: #14161c;
-    --accent-ink: #ff5a36;
-    --accent-soft: #3a211b;
+    --accent-ink: #7eb6b6;
+    --accent-soft: #36412d;
     --correct: #3ccf7a;
     --correct-soft: #173326;
     --wrong: #ff6b6b;

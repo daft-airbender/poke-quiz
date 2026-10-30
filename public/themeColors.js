@@ -9,7 +9,7 @@
 //   --accent-soft  the second color, faded almost into the card: selected-item backgrounds
 //   --bg           the page background, faintly tinted with the third (or second) color
 
-// Base surfaces from styles.css, per color scheme.
+// Base surfaces before any theme tint, per color scheme (styles.css's card and text; --bg is themed).
 export const SURFACES = {
   light: { card: '#ffffff', bg: '#f3f4f8', text: '#1d1f27' },
   dark: { card: '#1e2129', bg: '#14161c', text: '#eceef3' },
