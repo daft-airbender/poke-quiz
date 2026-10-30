@@ -160,6 +160,20 @@ button:focus-visible {
   border: 1px solid var(--border);
 }
 
+.danger {
+  background: var(--wrong);
+  color: #fff;
+  font-weight: 600;
+}
+
+.danger:disabled {
+  opacity: 0.6;
+}
+
+.danger-zone {
+  border-color: var(--wrong);
+}
+
 .full {
   width: 100%;
 }

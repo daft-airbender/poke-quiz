@@ -3,6 +3,7 @@ import { html } from 'htm/preact';
 
 // A modal dialog using the native <dialog> element: Esc closes it, focus stays inside while it's open,
 // and focus returns to the button that opened it. Tapping the dim backdrop also closes it.
+// children: the body and its buttons (callers add their own, e.g. "Got it" or Cancel / Confirm).
 export function Modal({ title, onClose, children }) {
   const dialog = useRef(null);
 
@@ -20,7 +21,6 @@ export function Modal({ title, onClose, children }) {
       <div class="modal-content stack">
         <h2 id="modal-title">${title}</h2>
         ${children}
-        <button type="button" class="primary full" onClick=${onClose}>Got it</button>
       </div>
     </dialog>
   `;

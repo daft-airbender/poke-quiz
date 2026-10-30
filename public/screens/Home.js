@@ -72,6 +72,7 @@ export function Home({ modes, generations, initialConfig, onStart }) {
           <p>${infoMode.description}</p>
           <p class="example"><span class="muted small">Example</span><br />${infoMode.example}</p>
           <p class="muted small">${infoMode.totalQuestions.toLocaleString()} questions across all generations</p>
+          <button type="button" class="primary full" onClick=${() => setInfoMode(null)}>Got it</button>
         <//>
       `}
     </main>

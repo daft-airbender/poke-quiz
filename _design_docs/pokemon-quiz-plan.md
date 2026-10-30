@@ -198,6 +198,7 @@ All JSON. All require auth unless noted.
 | POST | `/api/quiz/answer` | `{ questionKey, mode, correct }` → upsert progress |
 | POST | `/api/quiz/session` | record a finished round |
 | GET | `/api/progress/summary` | per-mode accuracy, weakest items, recent sessions |
+| POST | `/api/progress/reset` | `{ confirm: true }` → delete all of the user's progress and history (not login or settings) |
 | GET | `/api/modes` | list registered modes `{ id, label, answerType }` for the home screen |
 | GET | `/api/settings` | current user's settings (merged over defaults) |
 | PUT | `/api/settings` | update settings; validate known keys, ignore unknown |
@@ -267,6 +268,7 @@ Single page, Preact + htm (see §2), mobile-first. A root `App` component holds 
   - auto-advance after a correct answer (on/off)
   - (easy to add more keys later; defaults live in one place on the server: `DEFAULT_SETTINGS` in `src/routes/settings.js`)
   - Log out lives here (with "Logged in as …"); the header has Progress and Settings links, hidden during a round.
+  - At the bottom: a red **Reset all progress** button with a confirmation dialog. It must keep covering every per-user table as the schema grows (SRS included): see `USER_DATA_TABLES`.
 - **Question view:** sprite (if any), prompt, big tap-friendly choices, immediate right/wrong feedback (show the correct answer on a miss), "Next".
 - **Round summary:** score, missed items list, "Play again".
 - **Progress view:** accuracy per mode, top 10 weakest Pokémon/matchups (per mode), recent rounds.

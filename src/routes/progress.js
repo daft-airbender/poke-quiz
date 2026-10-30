@@ -2,7 +2,9 @@ import { desc, eq, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { getDb } from '../db/client.js';
 import { progress, quizSessions } from '../db/schema.js';
+import { deleteUserData } from '../db/userData.js';
 import { getMode, listModes } from '../quiz/modes/index.js';
+import { badRequest } from './errors.js';
 
 const WEAKEST_PER_MODE = 10;
 const RECENT_SESSIONS = 10;
@@ -69,6 +71,13 @@ export function progressRouter() {
     }));
 
     res.json({ modes, recentSessions });
+  });
+
+  // Deletes all of my progress and history (not my login or settings). Irreversible, so the body
+  // must say { confirm: true }: a stray or replayed request without it does nothing.
+  router.post('/progress/reset', async (req, res) => {
+    if (req.body?.confirm !== true) throw badRequest('Send { "confirm": true } to delete all progress');
+    res.json({ deleted: await deleteUserData(getDb(), req.userId) });
   });
 
   return router;

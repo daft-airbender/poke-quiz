@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { api } from '../api.js';
 import { GenerationChips } from '../components/GenerationChips.js';
+import { Modal } from '../components/Modal.js';
 import { Segmented } from '../components/Segmented.js';
 import { ROUND_LENGTHS } from './Home.js';
 
@@ -65,6 +66,53 @@ export function Settings({ settings, generations, username, onSaved, onLogout })
         <p class="muted">Logged in as <strong>${username}</strong></p>
         <button type="button" class="secondary full" onClick=${onLogout}>Log out</button>
       </section>
+
+      <${ResetProgress} />
     </form>
+  `;
+}
+
+// Deletes all progress and history on the server, after a confirmation dialog. Settings and login stay.
+function ResetProgress() {
+  const [confirming, setConfirming] = useState(false);
+  const [status, setStatus] = useState(''); // '' | 'deleting' | 'done'
+  const [error, setError] = useState('');
+
+  async function reset() {
+    setError('');
+    setStatus('deleting');
+    try {
+      await api('/api/progress/reset', { method: 'POST', body: { confirm: true } });
+      setStatus('done');
+      setConfirming(false);
+    } catch (err) {
+      setError(err.message);
+      setStatus('');
+    }
+  }
+
+  const close = () => status !== 'deleting' && setConfirming(false);
+
+  return html`
+    <section class="card stack danger-zone">
+      <div>
+        <h2>Reset all progress</h2>
+        <p class="muted small">Deletes every answer, score and round history on all your devices. Your login and settings stay.</p>
+      </div>
+      ${status === 'done' && html`<p class="small" role="status">All progress deleted.</p>`}
+      <button type="button" class="danger full" onClick=${() => { setStatus(''); setConfirming(true); }}>Reset all progress</button>
+
+      ${confirming &&
+      html`
+        <${Modal} title="Delete all progress?" onClose=${close}>
+          <p>This permanently deletes all your progress and history on every device. It can't be undone.</p>
+          ${error && html`<p class="error" role="alert">${error}</p>`}
+          <button type="button" class="danger full" disabled=${status === 'deleting'} onClick=${reset}>
+            ${status === 'deleting' ? 'Deleting…' : 'Delete everything'}
+          </button>
+          <button type="button" class="secondary full" disabled=${status === 'deleting'} onClick=${close}>Cancel</button>
+        <//>
+      `}
+    </section>
   `;
 }

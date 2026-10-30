@@ -72,6 +72,7 @@ To add a mode, create the file and list it in `src/quiz/modes/index.js`. `src/qu
 - Every answer updates a per-question progress row; every finished round is saved to the history. Quitting mid-round keeps the answers but doesn't record the round.
 - Rounds favor new and recently missed questions. A question answered correctly rests for 1, 2, 4, 8… days (doubling with each correct answer in a row) before it's likely to come up again. See `src/quiz/weighting.js`.
 - Settings (default round length, default generations, auto-advance) are stored on the server, so they sync across devices. Defaults and validation live in `src/routes/settings.js`.
+- **Reset all progress** (bottom of Settings, after a confirmation) deletes every per-user progress/history table in one transaction, keeping the login and settings. The list of tables is `USER_DATA_TABLES` in `src/db/userData.js`; a test fails if a table with a `user_id` column is missing from it, so new tables (e.g. the SRS ones) can't be forgotten.
 
 ## Database
 

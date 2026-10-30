@@ -70,8 +70,15 @@ test('PUT /api/settings rejects bad values with 400', async () => {
   }
 });
 
+test('POST /api/progress/reset needs { confirm: true }', async () => {
+  for (const body of [{}, { confirm: 'yes' }, { confirm: 1 }, []]) {
+    const res = await post('/api/progress/reset', body);
+    assert.equal(res.status, 400, JSON.stringify(body));
+  }
+});
+
 test('progress and settings routes require a login', async () => {
-  for (const [method, path] of [['GET', '/api/progress/summary'], ['GET', '/api/settings'], ['PUT', '/api/settings']]) {
+  for (const [method, path] of [['GET', '/api/progress/summary'], ['POST', '/api/progress/reset'], ['GET', '/api/settings'], ['PUT', '/api/settings']]) {
     const res = await fetch(server.baseUrl + path, { method });
     assert.equal(res.status, 401, path);
   }
