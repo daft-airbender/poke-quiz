@@ -9,6 +9,7 @@
 //   5. nothing left: return null with what can be offered (more new cards, practice the bank)
 // Mastered cards never appear. Banked cards only appear as check-ins.
 import { SRS_CONFIG } from './config.js';
+import { bankAnswerWouldCount } from './tiers.js';
 
 const MINUTE = 60 * 1000;
 
@@ -108,10 +109,13 @@ export function pickNextCard({ studied, newCards, recent, now, scheduler, newTod
 }
 
 // "Practice the bank" / "Practice mastered": only that tier, lowest R first, cooldown as above.
+// In the bank, cards whose correct answer would count toward Mastered today come first: practicing the
+// others can't move them along yet.
 export function pickPracticeCard({ studied, tier, recent, now, scheduler, config = SRS_CONFIG }) {
   const pool = studied.filter((card) => card.tier === tier);
   const ready = pool.filter((card) => !inCooldown(card.id, recent, now, config));
   const r = (card) => scheduler.retrievability(card.memory, now);
-  const card = ready.length ? [...ready].sort((a, b) => r(a) - r(b))[0] : pool.length ? shownLongestAgo(pool, recent) : null;
+  const counts = (card) => (tier === 'bank' && bankAnswerWouldCount(card, now, config) ? 0 : 1);
+  const card = ready.length ? [...ready].sort((a, b) => counts(a) - counts(b) || r(a) - r(b))[0] : pool.length ? shownLongestAgo(pool, recent) : null;
   return card ? { card, mode: tier === 'bank' ? 'bank_practice' : 'mastered_practice' } : { card: null };
 }

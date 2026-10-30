@@ -7,7 +7,7 @@ import { lengthLabel } from '../format.js';
 
 // Today at a glance, and Play. Play starts right away with the last length used; the small
 // "25 questions ▾" control changes it (spec: "Session length").
-export function Home({ onPlay, onFreePlay, onSaveLength }) {
+export function Home({ onPlay, onFreePlay, onPractice, onSaveLength }) {
   const [overview, setOverview] = useState(null);
   const [error, setError] = useState('');
   const [picking, setPicking] = useState(false);
@@ -65,6 +65,17 @@ export function Home({ onPlay, onFreePlay, onSaveLength }) {
           ${lengthLabel(length)} <span aria-hidden="true">▾</span>
         </button>
       </section>
+
+      ${overview.bankReady > 0 &&
+      html`
+        <section class="card stack nudge">
+          <p>
+            <strong>${overview.bankReady} banked ${overview.bankReady === 1 ? 'card' : 'cards'}</strong> can count toward Mastered today.
+            Cards reach Mastered through bank practice: 3 correct days, a week or more apart.
+          </p>
+          <button type="button" class="secondary full" onClick=${() => onPractice('bank_practice')}>Practice the bank</button>
+        </section>
+      `}
 
       <section class="card stack">
         <button type="button" class="secondary full" onClick=${() => onFreePlay(overview.lengths.free_play)}>Free Play</button>

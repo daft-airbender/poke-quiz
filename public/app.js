@@ -165,6 +165,7 @@ function App() {
     content = html`<${Home}
       onPlay=${startSession}
       onFreePlay=${(length) => setScreen({ name: 'free-play', length })}
+      onPractice=${(kind) => startSession(kind)}
       onSaveLength=${saveLength}
     />`;
   }

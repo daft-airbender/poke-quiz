@@ -47,6 +47,15 @@ export function retrievabilitySql(curve, now) {
     else power(1 + ${curve.factor}::float8 * ${days} / ${cardState.stability}, ${curve.decay}::float8) end)`;
 }
 
+// Would a correct answer to this banked card count toward Mastered today? The SQL twin of bankAnswerWouldCount
+// (src/srs/tiers.js): 7+ New York days since the later of its last counted day and the day it was banked.
+function bankCountsTodaySql(now) {
+  const today = dayKey(now, SRS_CONFIG.timeZone);
+  const bankedDay = sql`(${cardState.bankedAt} at time zone ${SRS_CONFIG.timeZone})::date`;
+  return sql`(${cardState.tier} = 'bank' and greatest(${cardState.bankLastCounted}, ${bankedDay})
+    <= ${today}::date - ${SRS_CONFIG.mastery.minDaysBetweenCountedDays}::int)`;
+}
+
 // A studied card as the queue sees it: { id, cardType, promptKey, generation, ...card (memory, tier fields) }.
 const studiedColumns = { state: cardState, cardType: cards.cardType, promptKey: cards.promptKey, generation: cards.generation };
 const toStudied = ({ state, cardType, promptKey, generation }) => ({ id: state.cardId, cardType, promptKey, generation, ...cardFromRow(state) });
@@ -292,9 +301,10 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
     const recent = state.answers.map((a) => ({ cardId: a.cardId, at: a.at }));
     if (PRACTICE_TIER[session.kind]) {
       const tier = PRACTICE_TIER[session.kind];
+      // Bank practice: cards whose answer would count toward Mastered today first (see pickPracticeCard).
       const rows = await studiedQuery(db, userId)
         .where(and(eq(cardState.userId, userId), eq(cardState.tier, tier)))
-        .orderBy(retrievabilitySql(scheduler.curve, now))
+        .orderBy(sql`(case when ${bankCountsTodaySql(now)} then 0 else 1 end)`, retrievabilitySql(scheduler.curve, now))
         .limit(CANDIDATES_PER_TIER);
       picked = pickPracticeCard({ studied: rows.map(toStudied), tier, recent, now, scheduler });
       if (!picked.card) return { step: 'empty', canAddNew: false, canPracticeBank: false, progress };
@@ -581,7 +591,7 @@ export async function sessionSummary(db, userId, session) {
 
 export async function playOverview(db, userId, now, scheduler) {
   const settings = await rawSettings(db, userId);
-  const [today, due, tiers] = await Promise.all([
+  const [today, due, tiers, [{ bankReady }]] = await Promise.all([
     newToday(db, userId, now, settings),
     dueCount(db, userId, now, scheduler),
     db
@@ -589,6 +599,10 @@ export async function playOverview(db, userId, now, scheduler) {
       .from(cardState)
       .where(eq(cardState.userId, userId))
       .groupBy(cardState.tier),
+    db
+      .select({ bankReady: sql`count(*)`.mapWith(Number) })
+      .from(cardState)
+      .where(and(eq(cardState.userId, userId), bankCountsTodaySql(now))),
   ]);
   const counts = Object.fromEntries(tiers.map((t) => [t.tier, t.count]));
   return {
@@ -598,5 +612,7 @@ export async function playOverview(db, userId, now, scheduler) {
     rotation: counts.rotation ?? 0,
     bank: counts.bank ?? 0,
     mastered: counts.mastered ?? 0,
+    // Banked cards a correct answer would move toward Mastered today (Home's "Practice the bank" nudge).
+    bankReady,
   };
 }

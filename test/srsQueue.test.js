@@ -154,3 +154,16 @@ test('practice sessions draw only from their tier, lowest R first', () => {
   assert.deepEqual(pickPracticeCard({ studied: [rotation], tier: 'bank', recent: [], now: NOW, scheduler }), { card: null });
   assert.equal(SRS_CONFIG.repeatCooldown.cards, 8);
 });
+
+test('bank practice puts cards whose answer would count toward Mastered first', async () => {
+  const { bankAnswerWouldCount } = await import('../src/srs/tiers.js');
+  // Banked 3 days ago and very faded: lowest R, but an answer can't count yet.
+  const tooSoon = { ...card('soon', { tier: 'bank', stability: 30, lastReviewDaysAgo: 200 }), bankedAt: ago(3 * DAY) };
+  // Banked 10 days ago, still strong: an answer would count today.
+  const countable = { ...card('ready', { tier: 'bank', stability: 300, lastReviewDaysAgo: 20 }), bankedAt: ago(10 * DAY) };
+  assert.equal(bankAnswerWouldCount(tooSoon, NOW), false);
+  assert.equal(bankAnswerWouldCount(countable, NOW), true);
+  assert.equal(bankAnswerWouldCount({ ...countable, bankLastCounted: '2026-11-17' }, NOW), false, 'counted 3 days ago');
+  assert.equal(pickPracticeCard({ studied: [tooSoon, countable], tier: 'bank', recent: [], now: NOW, scheduler }).card.id, 'ready');
+  assert.equal(pickPracticeCard({ studied: [tooSoon], tier: 'bank', recent: [], now: NOW, scheduler }).card.id, 'soon', 'the rest still get practiced');
+});

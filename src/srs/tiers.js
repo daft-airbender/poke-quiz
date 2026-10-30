@@ -48,6 +48,12 @@ function countsAsCorrectDay(card, today, config) {
   return daysBetween(since, today) >= config.mastery.minDaysBetweenCountedDays;
 }
 
+// Would a correct answer to this banked card count toward Mastered if given at `now`? (Home's nudge and
+// bank practice's order use this; the database has the same rule in bankCountsTodaySql.)
+export function bankAnswerWouldCount(card, now, config = SRS_CONFIG) {
+  return card.tier === 'bank' && countsAsCorrectDay(card, dayKey(now, config.timeZone), config);
+}
+
 // Applies the tier rules after an answer. `card.memory` must already be the FSRS state *after* the answer.
 // Returns { card, transition } where transition is 'banked' | 'mastered' | 'back_to_rotation' | null.
 export function applyTierRules(card, rating, now, config = SRS_CONFIG) {

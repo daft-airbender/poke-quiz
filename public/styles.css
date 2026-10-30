@@ -1338,3 +1338,9 @@ button.brand {
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
+
+/* Home: "Practice the bank" nudge */
+.nudge {
+  border-color: var(--tier-bank);
+  background: var(--accent-soft);
+}
