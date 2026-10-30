@@ -351,6 +351,9 @@ Work through these in order; stop after each and summarize what was done.
    - **Local testing checkpoint:** I play-test the full MVP locally (all screens and modes, progress, settings) against `poke-quiz-dev`, and we fix what I find before deploying.
 8. **Modes v1:** the 11 modes above, in three chunks: (a) rename/split the existing modes + region data, (b) Counters, Pokémon → Region, Region → Pokémon, (c) the `text` and `number` answer types and their three modes.
 9. **Spaced repetition** (`pokemon-quiz-srs-spec.md`), in phases S1–S8: scheduler core, tier/queue/session rules, database, Play API, Play screen, Free Play, Bank/Mastered screens, Progress screen. Then a local testing checkpoint.
+   - **Decided — Play scope ("What to learn" setting):** with ~10,000 cards across 11 modes, Settings gets a choice of which **modes** and **generations** Play introduces *new* cards from. It only gates new cards (queue tier 3, built in S2; Settings UI in S5): cards already studied in a turned-off mode or generation keep coming back for their due reviews and check-ins. Default: all modes and generations.
+   - **Decided — charts** wait for the SRS Progress screen (S8); no interim chart on the current Progress page.
+   - Still open before S1: `ts-fsrs` version (5.4.2 recommended), deploy the current version first or not, charts as plain SVG or a library.
 10. **Deploy:** `render.yaml`, deploy notes in README, verify end to end on phone + laptop. (Open question: deploy the current version earlier so it's usable on a phone while the SRS is built.)
 
 ## 15. Done when
