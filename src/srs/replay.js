@@ -26,7 +26,7 @@ export function replayCard({ reviews, events }, { scheduler, config = SRS_CONFIG
     } else if (item.event.action === 'undo') {
       card = restoreTier(card, tierSnapshotFromJson(item.event.undoTo));
     } else {
-      card = manualTierChange(card, item.event.action, item.event.at);
+      card = manualTierChange(card, item.event.action, item.event.at, config);
     }
   }
   return card;

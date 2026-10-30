@@ -3,6 +3,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { api, onSlowChange, onUnauthorized } from './api.js';
 import { Spinner, WakeUpOverlay } from './components/Loader.js';
+import { Cards } from './screens/Cards.js';
 import { FreePlaySetup } from './screens/FreePlaySetup.js';
 import { Home } from './screens/Home.js';
 import { Login } from './screens/Login.js';
@@ -14,7 +15,7 @@ import { applyTheme } from './theme.js';
 
 // Root component: checks the session, loads modes, settings and themes, and switches between screens.
 // screen: { name: 'home' } | { name: 'free-play', length } | { name: 'play', session, next }
-//       | { name: 'summary', summary, session } | { name: 'progress' } | { name: 'settings' }
+//       | { name: 'summary', summary, session } | { name: 'cards', tab? } | { name: 'progress' } | { name: 'settings' }
 function App() {
   const [user, setUser] = useState(undefined); // undefined = still checking, null = logged out
   const [catalog, setCatalog] = useState(null); // { modes, generations } from /api/modes
@@ -138,6 +139,13 @@ function App() {
         onBack=${() => setScreen({ name: 'home' })}
       />
     `;
+  } else if (screen.name === 'cards') {
+    content = html`<${Cards}
+      modes=${catalog.modes}
+      generations=${catalog.generations}
+      initialTab=${screen.tab}
+      onPractice=${(kind) => startSession(kind)}
+    />`;
   } else if (screen.name === 'progress') {
     content = html`<${Progress} onHome=${() => setScreen({ name: 'home' })} />`;
   } else if (screen.name === 'settings') {
@@ -171,7 +179,7 @@ function App() {
   return html`
     <header class="app-header">
       ${showNav ? html`<button type="button" class="brand" onClick=${() => setScreen({ name: 'home' })}>Poké Quiz</button>` : html`<span class="brand">Poké Quiz</span>`}
-      ${showNav && html`<nav class="nav">${navLink('progress', 'Progress')}${navLink('settings', 'Settings')}</nav>`}
+      ${showNav && html`<nav class="nav">${navLink('cards', 'Cards')}${navLink('progress', 'Progress')}${navLink('settings', 'Settings')}</nav>`}
     </header>
     ${content}
     ${waking && html`<${WakeUpOverlay} />`}

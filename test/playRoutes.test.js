@@ -64,3 +64,19 @@ test('isTierSnapshot accepts exactly the undo shape', () => {
     assert.equal(isTierSnapshot(bad), false, JSON.stringify(bad));
   }
 });
+
+test('card routes check their input before touching the database', async () => {
+  for (const path of ['/api/cards?tier=gold', '/api/cards?mode=nope', '/api/cards?gen=12', '/api/cards?sort=random', '/api/cards?offset=-1', `/api/cards?q=${'x'.repeat(41)}`]) {
+    assert.equal((await request('GET', path)).status, 400, path);
+  }
+  assert.equal((await request('GET', '/api/cards/abc')).status, 404);
+  for (const [path, body] of [
+    ['/api/cards/1/action', { action: 'delete' }],
+    ['/api/cards/bulk', { action: 'restore', filters: { tier: 'gold' } }],
+    ['/api/cards/bulk', { action: 'restore', filters: {}, count: 0 }],
+    ['/api/cards/bulk', { action: 'explode', filters: {} }],
+  ]) {
+    assert.equal((await request('POST', path, body)).status, 400, path + JSON.stringify(body));
+  }
+  assert.equal((await request('GET', '/api/cards', undefined, null)).status, 401, 'login required');
+});

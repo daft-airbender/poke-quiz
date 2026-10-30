@@ -198,3 +198,22 @@ test('addDays moves across month and year ends', async () => {
   assert.equal(addDays('2026-12-31', 1), '2027-01-01');
   assert.equal(addDays('2028-02-28', 1), '2028-02-29');
 });
+
+test('banking or mastering a never-answered card by hand gives it a starting memory (no instant check-in)', async () => {
+  const { ACTIONS_BY_TIER } = await import('../src/srs/tiers.js');
+  const unseen = { ...newTierFields(), memory: newCardMemory() };
+  for (const action of ['move_to_bank', 'mark_mastered']) {
+    const card = manualTierChange(unseen, action, day(0));
+    assert.equal(card.memory.state, 'review');
+    assert.equal(card.memory.stability, SRS_CONFIG.bank.minStabilityDays);
+    assert.equal(+card.memory.lastReviewAt, +day(0));
+    const r = (n) => scheduler.retrievability(card.memory, day(n));
+    // FSRS-6: with 30-day stability, recall drops below 80% at about 100 days.
+    assert.ok(r(90) > SRS_CONFIG.bank.checkInBelowRetrievability, 'no check-in for the first three months');
+    assert.ok(r(110) < SRS_CONFIG.bank.checkInBelowRetrievability, 'first check-in by about 100 days');
+  }
+  // A studied card keeps its real memory.
+  const studied = rotationCard(3);
+  assert.equal(manualTierChange(studied, 'move_to_bank', day(0)).memory.stability, 3);
+  assert.deepEqual(ACTIONS_BY_TIER.mastered, ['restore', 'demote']);
+});

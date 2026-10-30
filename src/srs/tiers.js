@@ -86,12 +86,39 @@ export function applyTierRules(card, rating, now, config = SRS_CONFIG) {
   return { card: next, transition };
 }
 
-// Manual actions from the Bank / Mastered screens (spec: "Screens and actions"). They skip the automatic rules.
+// Which manual actions make sense for a card in each tier ('unseen' = never answered, no card_state).
+export const ACTIONS_BY_TIER = {
+  unseen: ['move_to_bank', 'mark_mastered'],
+  rotation: ['move_to_bank', 'mark_mastered'],
+  bank: ['restore', 'mark_mastered'],
+  mastered: ['restore', 'demote'],
+};
+
+// A card never answered has no memory to schedule check-ins from (its recall chance would read 0%, so it
+// would come straight back as a check-in). Moving it to the bank or mastered means "I already know this",
+// so it starts as if just reviewed with the bank's entry stability: its first check-in comes when recall
+// is predicted to drop below the check-in threshold, about 100 days later. Deterministic, so replayable.
+function knownCardMemory(memory, now, config) {
+  const stability = config.bank.minStabilityDays;
+  return {
+    ...memory,
+    state: 'review',
+    stability,
+    difficulty: config.manualKnownDifficulty,
+    lastReviewAt: now,
+    due: new Date(now.getTime() + stability * 24 * 60 * 60 * 1000),
+  };
+}
+
+// Manual actions from the card screens (spec: "Screens and actions"). They skip the automatic rules.
 //   restore:       bank/mastered -> rotation, due now; FSRS state and counter kept
 //   demote:        mastered -> bank (back on check-ins); the 7-day wait starts again
 //   move_to_bank:  any -> bank, for cards I already know cold
 //   mark_mastered: any -> mastered
-export function manualTierChange(card, action, now) {
+export function manualTierChange(card, action, now, config = SRS_CONFIG) {
+  if ((action === 'move_to_bank' || action === 'mark_mastered') && card.memory.state === 'new') {
+    card = { ...card, memory: knownCardMemory(card.memory, now, config) };
+  }
   switch (action) {
     case 'restore':
       return { ...card, tier: 'rotation', memory: { ...card.memory, due: now } };

@@ -55,7 +55,7 @@ export function Home({ onPlay, onFreePlay, onSaveLength }) {
         <p class="muted small">
           ${studied === 0
             ? 'Nothing studied yet. Play introduces new cards a few at a time.'
-            : `${overview.rotation} learning · ${overview.bank} in the bank · ${overview.mastered} mastered`}
+            : `${overview.rotation} in rotation · ${overview.bank} in the bank · ${overview.mastered} mastered`}
         </p>
       </section>
 

@@ -95,3 +95,13 @@ test('the catalog has one card per mode question, with a payload and stable keys
   const pikachu = catalog.find((c) => c.promptKey === 'name-choice:25');
   assert.deepEqual([pikachu.generation, pikachu.sortOrder, pikachu.payload.title], [1, 24, 'Pikachu']);
 });
+
+test('a never-answered card moved to the bank by hand replays exactly', () => {
+  const at = new Date('2026-11-01T15:00:00Z');
+  const live = manualTierChange({ ...newTierFields(), memory: newCardMemory() }, 'move_to_bank', at);
+  assert.deepEqual(replayCard({ reviews: [], events: [{ at, action: 'move_to_bank', undoTo: null }] }, { scheduler }), live);
+  // ...and then answered in a check-in.
+  const answered = reviewCard(live, RATING.good, new Date('2026-12-20T15:00:00Z'), { scheduler }).card;
+  const reviews = [{ reviewedAt: new Date('2026-12-20T15:00:00Z'), rating: RATING.good, mode: 'bank_checkin' }];
+  assert.deepEqual(replayCard({ reviews, events: [{ at, action: 'move_to_bank', undoTo: null }] }, { scheduler }), answered);
+});

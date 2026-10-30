@@ -7,7 +7,7 @@ import { KIND_LABELS } from '../format.js';
 const dateFormat = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const TIERS = [
   ['unseen', 'Unseen'],
-  ['rotation', 'Learning'],
+  ['rotation', 'Rotation'],
   ['bank', 'Bank'],
   ['mastered', 'Mastered'],
 ];
