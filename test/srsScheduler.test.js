@@ -18,34 +18,34 @@ function establishedCard() {
   return card;
 }
 
-test('a new card rated Good goes through the learning steps, then becomes a review card', () => {
-  const first = scheduler.answer(newCardMemory(), RATING.good, T0);
-  assert.equal(first.state, 'learning');
-  assert.equal(first.due - T0, 10 * MINUTE, 'Good on a new card: the 10-minute step');
-  assert.equal(first.reps, 1);
-
-  const second = scheduler.answer(first, RATING.good, first.due);
-  assert.equal(second.state, 'review');
-  assert.ok(second.due - first.due >= DAY, 'graduated: due a day or more later');
-  assert.ok(second.stability > 0 && second.difficulty >= 1 && second.difficulty <= 10);
-
-  const again = scheduler.answer(newCardMemory(), RATING.again, T0);
-  assert.equal(again.state, 'learning');
-  assert.equal(again.due - T0, MINUTE, 'Again on a new card: the 1-minute step');
+test('a new card goes straight to review: right answers come back after days, wrong ones the next day', () => {
+  const after = (rating) => scheduler.answer(newCardMemory(), rating, T0);
+  for (const rating of [RATING.again, RATING.hard, RATING.good, RATING.easy]) {
+    assert.equal(after(rating).state, 'review', `rating ${rating}`);
+    assert.equal(after(rating).reps, 1);
+  }
+  assert.equal(after(RATING.again).due - T0, DAY, 'wrong: tomorrow');
+  assert.equal(after(RATING.hard).due - T0, DAY, 'hard: tomorrow');
+  assert.equal(after(RATING.good).due - T0, 2 * DAY, 'good: in 2 days');
+  assert.ok(after(RATING.easy).due - T0 >= 6 * DAY, 'easy: about a week');
+  assert.ok(after(RATING.good).stability > 0 && after(RATING.good).difficulty >= 1 && after(RATING.good).difficulty <= 10);
 });
 
-test('Again on a review card lowers stability, adds a lapse, and brings it back within minutes', () => {
+test('Again on a review card lowers stability sharply, adds a lapse, and brings it back days (not months) later', () => {
   const card = establishedCard();
   assert.equal(card.state, 'review');
   const missed = scheduler.answer(card, RATING.again, card.due);
-  assert.equal(missed.state, 'relearning');
-  assert.ok(missed.stability < card.stability / 5);
+  assert.ok(missed.stability < card.stability / 20, `stability ${card.stability} -> ${missed.stability}`);
   assert.equal(missed.lapses, card.lapses + 1);
-  assert.equal(missed.due - card.due, 10 * MINUTE, 'the 10-minute relearning step');
+  // A long-known card keeps some memory: back in days, scaled to its new stability (about 5 days here).
+  assert.ok(missed.due - card.due <= Math.ceil(missed.stability * 1.2) * DAY, 'back within its new stability');
+  assert.ok(missed.due - card.due >= DAY, 'not the same day');
+  // A newer card forgotten comes back within two days.
+  const young = scheduler.answer(scheduler.answer(newCardMemory(), RATING.good, T0), RATING.again, later(T0, 2 * DAY));
+  assert.ok(young.due - later(T0, 2 * DAY) <= 2 * DAY);
 
-  // Missing it minutes after a correct answer still sends it back to relearning.
+  // Missing it minutes after a correct answer still counts as a lapse and lowers stability.
   const soon = scheduler.answer(card, RATING.again, later(card.lastReviewAt, 5 * MINUTE));
-  assert.equal(soon.state, 'relearning');
   assert.ok(soon.stability < card.stability);
   assert.equal(soon.lapses, card.lapses + 1);
 });
@@ -127,14 +127,16 @@ test('answer is pure and rejects ratings outside 1-4', () => {
 
 // The wrapper converts to and from ts-fsrs cards on every answer; it must not lose anything.
 test('the wrapper matches ts-fsrs exactly over a long random history', () => {
+  // The library configured straight from the app's config, independently of the wrapper's own mapping.
+  const config = SRS_CONFIG.fsrs;
   const library = fsrs(
     generatorParameters({
-      request_retention: 0.9,
-      maximum_interval: 36500,
-      enable_short_term: true,
-      learning_steps: ['1m', '10m'],
-      relearning_steps: ['10m'],
-      enable_fuzz: true,
+      request_retention: config.desiredRetention,
+      maximum_interval: config.maximumIntervalDays,
+      enable_short_term: config.shortTermScheduling,
+      learning_steps: [...config.learningSteps],
+      relearning_steps: [...config.relearningSteps],
+      enable_fuzz: config.fuzz,
     }),
   );
   let raw = createEmptyCard(T0);

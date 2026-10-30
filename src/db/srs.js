@@ -179,18 +179,20 @@ const lengthOf = (session) => (session.lengthType === 'endless' ? { type: 'endle
 async function playCandidates(db, userId, now, scheduler, settings) {
   const r = retrievabilitySql(scheduler.curve, now);
   const rotation = eq(cardState.tier, 'rotation');
+  // What to learn applies to everything Play shows: cards outside it wait until they're included again.
+  const inScope = scopeSql(settings.playScope);
   const limit = CANDIDATES_PER_TIER;
   const [steps, dueReviews, checkIns, anyBank, ahead] = await Promise.all([
     studiedQuery(db, userId)
-      .where(and(eq(cardState.userId, userId), rotation, inArray(cardState.fsrsState, ['learning', 'relearning']), sql`${cardState.dueAt} <= ${now}`))
+      .where(and(eq(cardState.userId, userId), inScope, rotation, inArray(cardState.fsrsState, ['learning', 'relearning']), sql`${cardState.dueAt} <= ${now}`))
       .orderBy(asc(cardState.dueAt))
       .limit(limit),
     studiedQuery(db, userId)
-      .where(and(eq(cardState.userId, userId), rotation, eq(cardState.fsrsState, 'review'), sql`${cardState.dueAt} <= ${now}`))
+      .where(and(eq(cardState.userId, userId), inScope, rotation, eq(cardState.fsrsState, 'review'), sql`${cardState.dueAt} <= ${now}`))
       .orderBy(r, sql`random()`) // ties (same R) in random order, not card id order
       .limit(limit),
     studiedQuery(db, userId)
-      .where(and(eq(cardState.userId, userId), eq(cardState.tier, 'bank'), sql`${r} < ${SRS_CONFIG.bank.checkInBelowRetrievability + CHECK_IN_MARGIN}`))
+      .where(and(eq(cardState.userId, userId), inScope, eq(cardState.tier, 'bank'), sql`${r} < ${SRS_CONFIG.bank.checkInBelowRetrievability + CHECK_IN_MARGIN}`))
       .orderBy(r, sql`random()`) // ties (same R) in random order, not card id order
       .limit(limit),
     studiedQuery(db, userId)
@@ -201,6 +203,7 @@ async function playCandidates(db, userId, now, scheduler, settings) {
       .where(
         and(
           eq(cardState.userId, userId),
+          inScope,
           rotation,
           sql`${cardState.fsrsState} <> 'new'`,
           sql`(${cardState.lastReviewAt} at time zone ${SRS_CONFIG.timeZone})::date < ${dayKey(now, SRS_CONFIG.timeZone)}::date`,
@@ -254,14 +257,17 @@ async function nextNewCards(db, userId, scope) {
 }
 
 // How many cards are due right now (learning steps, reviews, bank check-ins), for the "due / ahead" indicator.
-async function dueCount(db, userId, now, scheduler) {
+// Only cards in the Play scope (What to learn), so it matches what Play will show.
+async function dueCount(db, userId, now, scheduler, scope) {
   const r = retrievabilitySql(scheduler.curve, now);
   const [{ count }] = await db
     .select({ count: sql`count(*)`.mapWith(Number) })
     .from(cardState)
+    .innerJoin(cards, eq(cards.id, cardState.cardId))
     .where(
       and(
         eq(cardState.userId, userId),
+        scopeSql(scope),
         sql`((${cardState.tier} = 'rotation' and ${cardState.fsrsState} <> 'new' and ${cardState.dueAt} <= ${now})
           or (${cardState.tier} = 'bank' and ${r} < ${SRS_CONFIG.bank.checkInBelowRetrievability}))`,
       ),
@@ -290,7 +296,7 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
   const progress = {
     label: progressLabel(state, now),
     answered: answers.length,
-    dueNow: await dueCount(db, userId, now, scheduler),
+    dueNow: await dueCount(db, userId, now, scheduler, (await rawSettings(db, userId)).playScope),
     wrapUpPending: wrapUpCards(state).length, // for "Review N missed cards" on End session
   };
   if (session.endedAt) return { step: 'done', progress };
@@ -609,7 +615,7 @@ export async function playOverview(db, userId, now, scheduler) {
   const settings = await rawSettings(db, userId);
   const [today, due, tiers, [{ bankReady }]] = await Promise.all([
     newToday(db, userId, now, settings),
-    dueCount(db, userId, now, scheduler),
+    dueCount(db, userId, now, scheduler, settings.playScope),
     db
       .select({ tier: cardState.tier, count: sql`count(*)`.mapWith(Number) })
       .from(cardState)

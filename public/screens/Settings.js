@@ -43,7 +43,7 @@ export function Settings({ settings, modes, generations, themes, username, onSav
       <section class="card stack">
         <div>
           <h2>What to learn</h2>
-          <p class="small muted">New cards in Play come only from what's checked here. Cards you've already started keep coming back for review either way.</p>
+          <p class="small muted">Play only shows cards from what's checked here, new and already started. Cards outside it wait (nothing is lost) and come back when you include them again.</p>
         </div>
         <${ScopePicker} modes=${modes} generations=${generations} scope=${draft.playScope} onChange=${(playScope) => update({ playScope })} />
       </section>

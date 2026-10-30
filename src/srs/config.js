@@ -7,8 +7,11 @@ export const SRS_CONFIG = Object.freeze({
     desiredRetention: 0.9, // schedule a review when recall is expected to drop to 90%
     maximumIntervalDays: 36500,
     shortTermScheduling: true, // minute-level learning steps and same-day repeats
-    learningSteps: Object.freeze(['1m', '10m']),
-    relearningSteps: Object.freeze(['10m']),
+    // No minute-level steps (changed from the spec's 1m / 10m after play-testing): a card answered right isn't
+    // shown again for days (Hard ~1, Good ~2, Easy ~8), and one answered wrong comes back in a day or two, after
+    // its one wrap-up retry at the end of the session. Same-day repeats crowded new cards out of later rounds.
+    learningSteps: Object.freeze([]),
+    relearningSteps: Object.freeze([]),
     fuzz: true, // spread out cards learned together so they don't all come due the same day
     weights: null, // null = ts-fsrs defaults; later, weights fit to my own review_log
   }),
