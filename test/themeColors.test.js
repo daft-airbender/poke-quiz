@@ -2,15 +2,17 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import palettes from '../data/pokemon-palettes.json' with { type: 'json' };
 import { contrast, MIN_CONTRAST, SURFACES, themeVariables } from '../public/themeColors.js';
+import { distinctColors } from '../scripts/colorDistinct.js';
 import { ALL_POKEMON } from '../src/quiz/pokemon.js';
 
 const entries = Object.entries(palettes.palettes);
 
-test('every Pokémon has 1–3 palette colors', () => {
+test('every Pokémon has exactly two visually distinct colors', () => {
   assert.equal(entries.length, ALL_POKEMON.length);
   for (const [id, colors] of entries) {
-    assert.ok(colors.length >= 1 && colors.length <= 3, id);
+    assert.equal(colors.length, 2, id);
     assert.ok(colors.every((c) => /^#[0-9a-f]{6}$/.test(c)), id);
+    assert.ok(distinctColors(colors[0], colors[1]), `#${id}: ${colors.join(' / ')} are too alike`);
   }
 });
 

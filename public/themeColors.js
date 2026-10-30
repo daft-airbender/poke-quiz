@@ -1,4 +1,4 @@
-// Turns a Pokémon's palette (accent first, from data/pokemon-palettes.json) into the app's CSS color tokens.
+// Turns a Pokémon's two colors (accent first, from data/pokemon-palettes.json) into the app's CSS color tokens.
 // Pure functions, no DOM: test/themeColors.test.js checks every palette for readable contrast.
 //
 //   --accent       the Pokémon's main color, used as a fill (buttons, progress bar, toggles). Mid-tone
@@ -7,7 +7,7 @@
 //   --accent-ink   the main color darkened (light mode) or lightened (dark mode) until it's readable
 //                  as text or a border on cards and backgrounds (brand, links, selected outlines)
 //   --accent-soft  the second color, faded almost into the card: selected-item backgrounds
-//   --bg           the page background, faintly tinted with the third (or second) color
+//   --bg           the page background, faintly tinted with the second color
 
 // Base surfaces before any theme tint, per color scheme (styles.css's card and text; --bg is themed).
 export const SURFACES = {
@@ -63,12 +63,12 @@ function fillWithText(color) {
 // CSS variables for one palette in one color scheme ('light' | 'dark').
 export function themeVariables(colors, scheme) {
   const { card, bg } = SURFACES[scheme];
-  const [main, second = main, third = second] = colors;
+  const [main, second] = colors;
   const dark = scheme === 'dark';
   const { fill: accent, text: accentText } = fillWithText(main);
 
   const soft = mix(second, card, dark ? 0.78 : 0.85);
-  const tintedBg = mix(third, bg, dark ? 0.9 : 0.88);
+  const tintedBg = mix(second, bg, dark ? 0.9 : 0.88);
   return {
     '--accent': accent,
     '--accent-text': accentText,

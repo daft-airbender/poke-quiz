@@ -1,6 +1,6 @@
 :root {
   /* --bg and the accent tokens below are the default theme, #1 Bulbasaur (themeVariables() output). */
-  --bg: #dedee2;
+  --bg: #e6eee2;
   --text: #1d1f27;
   --muted: #6b7080;
   --card: #ffffff;
@@ -9,8 +9,8 @@
      --accent is a fill (with --accent-text on it); --accent-ink is for text and borders. */
   --accent: #388f8f;
   --accent-text: #14161c;
-  --accent-ink: #2a6b6b;
-  --accent-soft: #eef4e1;
+  --accent-ink: #2d7272;
+  --accent-soft: #edf5e3;
   --correct: #1f9d55;
   --correct-soft: #dcf5e6;
   --wrong: #d64545;
@@ -38,7 +38,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #191a20;
+    --bg: #202720;
     --text: #eceef3;
     --muted: #9aa0b0;
     --card: #1e2129;
@@ -46,7 +46,7 @@
     --accent: #388f8f;
     --accent-text: #14161c;
     --accent-ink: #7eb6b6;
-    --accent-soft: #36412d;
+    --accent-soft: #36442f;
     --correct: #3ccf7a;
     --correct-soft: #173326;
     --wrong: #ff6b6b;
