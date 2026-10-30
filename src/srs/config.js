@@ -13,7 +13,10 @@ export const SRS_CONFIG = Object.freeze({
     weights: null, // null = ts-fsrs defaults; later, weights fit to my own review_log
   }),
 
-  newCardsPerDay: 20, // soft limit, counted per America/New_York day
+  // New cards per day (counted per America/New_York day). null = unlimited, the default; each user can pick a
+  // limit in Settings from these options. Fewer new cards a day means fewer reviews in the weeks after.
+  newCardsPerDay: null,
+  newCardsPerDayOptions: Object.freeze([10, 20, 30, 50, 100]),
   addMoreNewCards: 10, // the "Add 10 more" button
   repeatCooldown: Object.freeze({ cards: 8, minutes: 3 }), // don't repeat a card sooner, unless it's a due learning step
   wrapUpWaitSeconds: 5, // a wrap-up card that was just shown, with no other to put first, waits this long

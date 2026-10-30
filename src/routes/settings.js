@@ -4,6 +4,7 @@ import { getDb } from '../db/client.js';
 import { users } from '../db/schema.js';
 import { listModes } from '../quiz/modes/index.js';
 import { GENERATIONS, POKEMON_BY_ID } from '../quiz/pokemon.js';
+import { SRS_CONFIG } from '../srs/config.js';
 import { parseSessionLength } from '../srs/session.js';
 import { badRequest } from './errors.js';
 
@@ -15,6 +16,7 @@ export const DEFAULT_SETTINGS = {
   lastLength: { play: null, free_play: null }, // last session length used, per kind; null = the default
   newCardsExtra: { day: null, count: 0 }, // "Add 10 more" new cards: how many extra, for which New York day
   freePlayFilter: { modes: null, gens: null }, // the last Free Play filters used; null = all
+  newCardsPerDay: SRS_CONFIG.newCardsPerDay, // daily limit on new cards in Play; null = unlimited
 };
 
 const MODE_IDS = listModes().map((mode) => mode.id);
@@ -47,6 +49,7 @@ const VALIDATORS = {
   theme: (value) => Number.isInteger(value) && POKEMON_BY_ID.has(value),
   playScope: (value) => isScope(value),
   freePlayFilter: (value) => isScope(value),
+  newCardsPerDay: (value) => value === null || SRS_CONFIG.newCardsPerDayOptions.includes(value),
   // A kind not used yet may be missing or null.
   lastLength: (value) =>
     isPlainObject(value) && ['play', 'free_play'].every((kind) => (value[kind] ?? null) === null || parseSessionLength(value[kind]) !== null),

@@ -52,3 +52,10 @@ test('spaced-repetition settings: Play scope, last session lengths, extra new ca
 test('lastLength may have a kind missing (not used yet)', () => {
   assert.deepEqual(withDefaults({ lastLength: { play: { type: 'count', value: 10 } } }).lastLength, { play: { type: 'count', value: 10 } });
 });
+
+test('new cards per day: unlimited by default, or one of the offered limits', () => {
+  assert.equal(withDefaults({}).newCardsPerDay, null);
+  assert.deepEqual(parseSettingsUpdate({ newCardsPerDay: 30 }), { newCardsPerDay: 30 });
+  assert.deepEqual(parseSettingsUpdate({ newCardsPerDay: null }), { newCardsPerDay: null });
+  for (const bad of [0, 25, '20', -1]) assert.throws(() => parseSettingsUpdate({ newCardsPerDay: bad }), { status: 400 }, String(bad));
+});

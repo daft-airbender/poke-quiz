@@ -103,18 +103,33 @@ test('the queue never comes back empty while studied rotation cards exist', () =
   assert.equal(pick([a, b], { recent }).card.id, 'a', 'the one shown longest ago');
 });
 
-test('daily new-card limit, with "add more" going past it', () => {
+test('daily new-card limit (a setting: unlimited by default), with "add more" going past it', () => {
   const ahead = card('ahead', { dueInMs: DAY });
   const newOne = unseen('new');
-  assert.equal(newCardsLeft({ introducedToday: 0 }), 20);
-  assert.equal(newCardsLeft({ introducedToday: 20 }), 0);
-  assert.equal(newCardsLeft({ introducedToday: 20, extraToday: 10 }), 10);
-  assert.equal(newCardsLeft({ introducedToday: 35, extraToday: 10 }), 0);
+  assert.equal(newCardsLeft({ introducedToday: 500 }), Infinity, 'no limit by default');
+  assert.equal(newCardsLeft({ introducedToday: 500, limit: null }), Infinity);
+  assert.equal(newCardsLeft({ introducedToday: 0, limit: 20 }), 20);
+  assert.equal(newCardsLeft({ introducedToday: 20, limit: 20 }), 0);
+  assert.equal(newCardsLeft({ introducedToday: 20, extraToday: 10, limit: 20 }), 10);
+  assert.equal(newCardsLeft({ introducedToday: 35, extraToday: 10, limit: 20 }), 0);
 
-  assert.equal(pick([ahead], { newCards: [newOne], newToday: { introducedToday: 20 } }).card.id, 'ahead', 'limit reached');
-  assert.equal(pick([ahead], { newCards: [newOne], newToday: { introducedToday: 20, extraToday: 10 } }).card.id, 'new');
-  const nothing = pick([], { newCards: [newOne], newToday: { introducedToday: 20 } });
+  assert.equal(pick([ahead], { newCards: [newOne], newToday: { introducedToday: 500 } }).card.id, 'new', 'unlimited: always new cards first');
+  assert.equal(pick([ahead], { newCards: [newOne], newToday: { introducedToday: 20, limit: 20 } }).card.id, 'ahead', 'limit reached');
+  assert.equal(pick([ahead], { newCards: [newOne], newToday: { introducedToday: 20, extraToday: 10, limit: 20 } }).card.id, 'new');
+  const nothing = pick([], { newCards: [newOne], newToday: { introducedToday: 20, limit: 20 } });
   assert.deepEqual(nothing, { card: null, canAddNew: true, canPracticeBank: false });
+  assert.equal(pick([], { newCards: [], newToday: { introducedToday: 20, limit: 20 } }).canAddNew, false, 'nothing left to add');
+});
+
+test('working ahead skips cards already answered today; with only those left, Play has nothing to show', () => {
+  const answeredToday = card('today', { stability: 2, lastReviewDaysAgo: 0.1, dueInMs: DAY });
+  const yesterday = card('yesterday', { stability: 2, lastReviewDaysAgo: 1.5, dueInMs: DAY });
+  const limitReached = { introducedToday: 20, limit: 20 };
+  assert.equal(pick([answeredToday, yesterday], { newToday: limitReached }).card.id, 'yesterday');
+  assert.equal(pick([answeredToday], { newToday: limitReached }).card, null, 'no same-day repeats');
+  // Learning steps still come back the same day: that's how a new or missed card is learned.
+  const step = card('step', { state: 'learning', stability: 1, lastReviewDaysAgo: 0.01, dueInMs: -1000 });
+  assert.equal(pick([answeredToday, step], { newToday: limitReached }).card.id, 'step');
 });
 
 test('Play scope: which modes and generations new cards come from', () => {
@@ -178,10 +193,10 @@ test('bank practice puts cards whose answer would count toward Mastered first', 
 });
 
 test('cards tied on recall come in random order, not catalog order', () => {
-  // Five cards all studied today: R is 100% for each (whole days), so it's a tie.
-  const today = Array.from({ length: 5 }, (_, i) => card(`c${i + 1}`, { stability: 2, lastReviewDaysAgo: 0, dueInMs: DAY }));
+  // Five cards all reviewed 3 days ago with the same stability: R is the same for each, so it's a tie.
+  const today = Array.from({ length: 5 }, (_, i) => card(`c${i + 1}`, { stability: 2, lastReviewDaysAgo: 3, dueInMs: DAY }));
   let seed = 11;
   const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  const firsts = new Set(Array.from({ length: 12 }, () => pickNextCard({ studied: today, newCards: [], recent: [], now: NOW, scheduler, newToday: { introducedToday: 20 }, random }).card.id));
+  const firsts = new Set(Array.from({ length: 12 }, () => pickNextCard({ studied: today, newCards: [], recent: [], now: NOW, scheduler, newToday: { introducedToday: 20, limit: 20 }, random }).card.id));
   assert.ok(firsts.size > 2, `different first picks: ${[...firsts].join(' ')}`);
 });

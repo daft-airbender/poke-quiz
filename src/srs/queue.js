@@ -5,11 +5,13 @@
 //   1. due learning/relearning steps, earliest due first                          -> mode 'due'
 //   2. due rotation reviews and bank check-ins (R below the threshold), lowest R   -> 'due' / 'bank_checkin'
 //   3. new cards, up to the daily limit (+ "add more"), in introduction order      -> 'new'
-//   4. keep playing: every other studied rotation card, lowest R first             -> 'ahead'
-//   5. nothing left: return null with what can be offered (more new cards, practice the bank)
+//   4. keep playing: studied rotation cards not answered today, lowest R first      -> 'ahead'
+//      (a repeat the same day adds almost nothing to memory, so it doesn't count as working ahead)
+//   5. nothing left: return null with what can be offered (more new cards, practice the bank, Free Play)
 // Mastered cards never appear. Banked cards only appear as check-ins.
 import { SRS_CONFIG } from './config.js';
 import { shuffle } from '../quiz/random.js';
+import { dayKey } from './days.js';
 import { bankAnswerWouldCount } from './tiers.js';
 
 const MINUTE = 60 * 1000;
@@ -28,8 +30,9 @@ export function inCooldown(cardId, recent, now, config = SRS_CONFIG) {
 }
 
 // How many new cards can still be introduced today.
-export function newCardsLeft({ introducedToday, extraToday = 0 }, config = SRS_CONFIG) {
-  return Math.max(0, config.newCardsPerDay + extraToday - introducedToday);
+// newToday: { introducedToday, extraToday, limit } where limit is the user's daily limit (null = unlimited).
+export function newCardsLeft({ introducedToday, extraToday = 0, limit = SRS_CONFIG.newCardsPerDay }) {
+  return limit == null ? Infinity : Math.max(0, limit + extraToday - introducedToday);
 }
 
 // The Play scope setting ("What to learn"): which modes and generations new cards come from.
@@ -76,6 +79,7 @@ function shownLongestAgo(cards, recent) {
 
 // studied:  cards answered at least once: [{ id, tier, memory, ... }]
 // newCards: unseen cards in scope, already in introduction order (orderNewCards)
+// newCards: unseen cards in scope, in introduction order (whether or not today's limit allows any).
 // Returns { card, mode } or { card: null, canAddNew, canPracticeBank }.
 export function pickNextCard({ studied, newCards, recent, now, scheduler, newToday, config = SRS_CONFIG, random = Math.random }) {
   const r = (card) => scheduler.retrievability(card.memory, now);
@@ -98,17 +102,19 @@ export function pickNextCard({ studied, newCards, recent, now, scheduler, newTod
   if (due) return { card: due, mode: due.tier === 'bank' ? 'bank_checkin' : 'due' };
 
   // 3. New cards, within today's allowance.
-  if (newCardsLeft(newToday, config) > 0 && newCards.length) return { card: newCards[0], mode: 'new' };
+  if (newCardsLeft(newToday) > 0 && newCards.length) return { card: newCards[0], mode: 'new' };
 
-  // 4. Keep playing: everything else in rotation, weakest first.
-  const ahead = lowestR(rotation.filter((card) => !cooling(card)));
+  // 4. Keep playing: rotation cards not already answered today, weakest first.
+  const today = dayKey(now, config.timeZone);
+  const notToday = rotation.filter((card) => !card.memory.lastReviewAt || dayKey(card.memory.lastReviewAt, config.timeZone) !== today);
+  const ahead = lowestR(notToday.filter((card) => !cooling(card)));
   if (ahead) return { card: ahead, mode: 'ahead' };
-
   // The cooldown is a preference, not a wall: if it's the only thing in the way, take the card shown longest ago.
-  if (rotation.length) return { card: shownLongestAgo(rotation, recent), mode: 'ahead' };
+  if (notToday.length) return { card: shownLongestAgo(notToday, recent), mode: 'ahead' };
 
   // 5. Nothing to play: offer more new cards or bank practice.
-  return { card: null, canAddNew: newCards.length > 0, canPracticeBank: studied.some((card) => card.tier === 'bank') };
+  // More new cards can be added only when a daily limit is what's holding them back.
+  return { card: null, canAddNew: newCards.length > 0 && newCardsLeft(newToday) === 0, canPracticeBank: studied.some((card) => card.tier === 'bank') };
 }
 
 // "Practice the bank" / "Practice mastered": only that tier, lowest R first, cooldown as above.

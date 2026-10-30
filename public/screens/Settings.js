@@ -5,6 +5,9 @@ import { Modal } from '../components/Modal.js';
 import { ThemePicker } from '../components/ThemePicker.js';
 import { ScopePicker } from '../components/ScopePicker.js';
 
+// The daily limits offered (null, Unlimited, is the default); matches SRS_CONFIG.newCardsPerDayOptions.
+const NEW_CARD_LIMITS = [10, 20, 30, 50, 100];
+
 // Saved to the server, so they follow me to every device. Defaults live on the server (src/routes/settings.js).
 export function Settings({ settings, modes, generations, themes, username, onSaved, onLogout }) {
   const [draft, setDraft] = useState(settings);
@@ -22,7 +25,10 @@ export function Settings({ settings, modes, generations, themes, username, onSav
     setStatus('saving');
     try {
       // Only the settings on this screen: others (like the last session length) are saved where they change.
-      const saved = await api('/api/settings', { method: 'PUT', body: { theme: draft.theme, playScope: draft.playScope } });
+      const saved = await api('/api/settings', {
+        method: 'PUT',
+        body: { theme: draft.theme, playScope: draft.playScope, newCardsPerDay: draft.newCardsPerDay },
+      });
       setDraft(saved);
       setStatus('saved');
       onSaved(saved);
@@ -40,6 +46,28 @@ export function Settings({ settings, modes, generations, themes, username, onSav
           <p class="small muted">New cards in Play come only from what's checked here. Cards you've already started keep coming back for review either way.</p>
         </div>
         <${ScopePicker} modes=${modes} generations=${generations} scope=${draft.playScope} onChange=${(playScope) => update({ playScope })} />
+      </section>
+
+      <section class="card stack">
+        <div>
+          <h2>New cards per day</h2>
+          <p class="small muted">How many new cards Play brings in each day. Each new card comes back for a few reviews over its first month, so more new cards today means more reviews later.</p>
+        </div>
+        <div class="chips">
+          ${[...NEW_CARD_LIMITS, null].map(
+            (limit) => html`
+              <button
+                key=${String(limit)}
+                type="button"
+                class=${`chip ${draft.newCardsPerDay === limit ? 'is-selected' : ''}`}
+                aria-pressed=${draft.newCardsPerDay === limit}
+                onClick=${() => update({ newCardsPerDay: limit })}
+              >
+                ${limit ?? 'Unlimited'}
+              </button>
+            `,
+          )}
+        </div>
       </section>
 
       <section class="card stack">

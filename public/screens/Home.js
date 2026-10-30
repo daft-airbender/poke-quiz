@@ -50,7 +50,9 @@ export function Home({ onPlay, onFreePlay, onPractice, onSaveLength }) {
         <h2>Today</h2>
         <div class="today-stats">
           <div><span class="stat">${overview.dueNow}</span><span class="muted small">due now</span></div>
-          <div><span class="stat">${overview.newLeft}</span><span class="muted small">new left</span></div>
+          ${overview.newLeft === null
+            ? html`<div><span class="stat">${overview.newIntroducedToday}</span><span class="muted small">new today</span></div>`
+            : html`<div><span class="stat">${overview.newLeft}</span><span class="muted small">new left today</span></div>`}
         </div>
         <p class="muted small">
           ${studied === 0

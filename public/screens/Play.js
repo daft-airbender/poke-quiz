@@ -226,10 +226,12 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
     }
   }
 
-  async function practiceBank() {
+  // End this session and start another kind (Free Play or bank practice) from the all-caught-up screen.
+  async function switchTo(kind) {
     await api(`/api/play/sessions/${session.id}/end`, { method: 'POST', body: { reason: 'quit' } }).catch(() => {});
-    onStartSession('bank_practice');
+    onStartSession(kind);
   }
+
 
   // Count and Endless labels come from the server; a timer counts down here.
   const label =
@@ -250,9 +252,15 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
     body = html`
       <section class="card stack center">
         <h2>All caught up</h2>
-        <p class="muted">Nothing is due, and ${next.canAddNew ? "today's new cards are used up" : 'there are no new cards left in What to learn'}.</p>
+        <p class="muted">
+          ${next.canAddNew
+            ? "Nothing is due and today's new cards are used up."
+            : "You've met every card in What to learn, and the rest are done for today."}
+          ${' '}Free Play quizzes you on anything, without affecting your learning.
+        </p>
         ${next.canAddNew && html`<button type="button" class="primary full" disabled=${busy} onClick=${addMoreNew}>Add 10 more new cards</button>`}
-        ${next.canPracticeBank && html`<button type="button" class="secondary full" disabled=${busy} onClick=${practiceBank}>Practice the bank</button>`}
+        ${next.canFreePlay && html`<button type="button" class=${`${next.canAddNew ? 'secondary' : 'primary'} full`} disabled=${busy} onClick=${() => switchTo('free_play')}>Free Play</button>`}
+        ${next.canPracticeBank && html`<button type="button" class="secondary full" disabled=${busy} onClick=${() => switchTo('bank_practice')}>Practice the bank</button>`}
         <button type="button" class="secondary full" disabled=${busy} onClick=${() => finish('quit')}>End session</button>
       </section>
     `;

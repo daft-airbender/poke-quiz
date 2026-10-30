@@ -77,7 +77,7 @@ async function rawSettings(db, userId) {
   return user?.settings ?? {};
 }
 
-// Today's new-card allowance: { introducedToday, extraToday }.
+// Today's new-card allowance: { introducedToday, extraToday, limit } (limit: the user's setting, null = unlimited).
 async function newToday(db, userId, now, settings) {
   const today = dayKey(now, SRS_CONFIG.timeZone);
   const [{ count }] = await db
@@ -92,7 +92,7 @@ async function newToday(db, userId, now, settings) {
       ),
     );
   const extra = settings.newCardsExtra?.day === today ? settings.newCardsExtra.count : 0;
-  return { introducedToday: count, extraToday: extra };
+  return { introducedToday: count, extraToday: extra, limit: settings.newCardsPerDay ?? SRS_CONFIG.newCardsPerDay };
 }
 
 // "Add 10 more" new cards for today.
@@ -106,8 +106,11 @@ export async function addMoreNewCards(db, userId, now) {
         case when ${users.settings} -> 'newCardsExtra' ->> 'day' = ${today} then (${users.settings} -> 'newCardsExtra' ->> 'count')::int + ${step}::int else ${step}::int end))`,
     })
     .where(eq(users.id, userId));
-  return newCardsLeft(await newToday(db, userId, now, await rawSettings(db, userId)));
+  return finiteOrNull(newCardsLeft(await newToday(db, userId, now, await rawSettings(db, userId))));
 }
+
+// For JSON: Infinity (no daily limit) becomes null.
+const finiteOrNull = (n) => (Number.isFinite(n) ? n : null);
 
 // Remembers the length just used, per kind (practice sessions share Play's).
 async function rememberLength(db, userId, kind, length) {
@@ -193,15 +196,24 @@ async function playCandidates(db, userId, now, scheduler, settings) {
     studiedQuery(db, userId)
       .where(and(eq(cardState.userId, userId), eq(cardState.tier, 'bank')))
       .limit(1),
+    // Working ahead: not cards already answered today (a same-day repeat adds almost nothing to memory).
     studiedQuery(db, userId)
-      .where(and(eq(cardState.userId, userId), rotation, sql`${cardState.fsrsState} <> 'new'`))
+      .where(
+        and(
+          eq(cardState.userId, userId),
+          rotation,
+          sql`${cardState.fsrsState} <> 'new'`,
+          sql`(${cardState.lastReviewAt} at time zone ${SRS_CONFIG.timeZone})::date < ${dayKey(now, SRS_CONFIG.timeZone)}::date`,
+        ),
+      )
       .orderBy(r, sql`random()`) // ties (same R) in random order, not card id order
       .limit(limit),
   ]);
   const byId = new Map([...steps, ...dueReviews, ...checkIns, ...anyBank, ...ahead].map((row) => [row.state.cardId, toStudied(row)]));
 
   const today = await newToday(db, userId, now, settings);
-  const newCards = newCardsLeft(today) > 0 ? await nextNewCards(db, userId, settings.playScope) : [];
+  // Fetched even when today's limit is reached, so "Add more new cards" can tell there are some left.
+  const newCards = await nextNewCards(db, userId, settings.playScope);
   return { studied: [...byId.values()], newCards, newToday: today };
 }
 
@@ -264,7 +276,7 @@ async function studiedCard(db, userId, cardId) {
 
 // The next thing to show in a session:
 //   { step: 'question', card: { id, mode, isWrapup, waitMs, tier, question, preview }, progress }
-//   { step: 'empty', canAddNew, canPracticeBank, progress }   (Play only: nothing left to play)
+//   { step: 'empty', canAddNew, canPracticeBank, canFreePlay, progress }   (nothing left to play now)
 //   { step: 'done', progress }
 // ending: "Review N missed cards" was chosen, so go straight to the wrap-up.
 export async function nextForSession(db, userId, session, now, scheduler, { ending = false } = {}) {
@@ -313,8 +325,9 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
       const settings = await rawSettings(db, userId);
       const candidates = await playCandidates(db, userId, now, scheduler, settings);
       picked = pickNextCard({ ...candidates, recent, now, scheduler });
-      if (!picked.card) return { step: 'empty', canAddNew: picked.canAddNew, canPracticeBank: picked.canPracticeBank, progress };
-      pastNewLimit = picked.mode === 'new' && candidates.newToday.introducedToday >= SRS_CONFIG.newCardsPerDay;
+      if (!picked.card) return { step: 'empty', canAddNew: picked.canAddNew, canPracticeBank: picked.canPracticeBank, canFreePlay: true, progress };
+      const { limit, introducedToday } = candidates.newToday;
+      pastNewLimit = picked.mode === 'new' && limit != null && introducedToday >= limit;
       // Working ahead because today's new cards are used up (not because there are none left): say so, and offer more.
       progress.newCardsUsedUp = picked.mode === 'ahead' && newCardsLeft(candidates.newToday) === 0;
     }
@@ -610,7 +623,8 @@ export async function playOverview(db, userId, now, scheduler) {
   const counts = Object.fromEntries(tiers.map((t) => [t.tier, t.count]));
   return {
     dueNow: due,
-    newLeft: newCardsLeft(today),
+    newLeft: finiteOrNull(newCardsLeft(today)), // null = no daily limit
+    newLimit: today.limit,
     newIntroducedToday: today.introducedToday,
     rotation: counts.rotation ?? 0,
     bank: counts.bank ?? 0,
