@@ -233,11 +233,18 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
   }
 
 
-  // Count and Endless labels come from the server; a timer counts down here.
+  // Count and Endless labels come from the server; a timer counts down here. Once time is up, the label says
+  // what's still happening: finishing the question on screen, or the wrap-up of missed cards.
+  const timeLeft =
+    session.length.type === 'timer' ? new Date(session.startedAt).getTime() + session.length.value * 60000 - (Date.now() + clockSkew.current) : null;
   const label =
-    session.length.type === 'timer'
-      ? `${clock(new Date(session.startedAt).getTime() + session.length.value * 60000 - (Date.now() + clockSkew.current))} left`
-      : progress?.label;
+    timeLeft === null
+      ? progress?.label
+      : timeLeft > 0
+        ? `${clock(timeLeft)} left`
+        : card?.isWrapup
+          ? "Time's up · reviewing misses"
+          : "Time's up · last question";
 
   const status = html`
     <div class="quiz-status">

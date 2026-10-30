@@ -52,13 +52,14 @@ export function nextStep(session, now, config = SRS_CONFIG) {
   return { step: 'wrapup', cardId, waitMs: cardId === lastShown ? config.wrapUpWaitSeconds * 1000 : 0 };
 }
 
-// Progress text for the play screen: "12 / 25", "3:41 left", or "37 answered · 89%" for Endless.
+// Progress text for the play screen: "12 / 25", "3:41 left" (then "Time's up"), or "37 answered · 89%" for Endless.
 export function progressLabel(session, now) {
   const counted = session.answers.filter((a) => !a.isWrapup);
   const { type, value } = session.length;
   if (type === 'count') return `${Math.min(counted.length, value)} / ${value}`;
   if (type === 'timer') {
-    const left = Math.max(0, value * MINUTE - (now - session.startedAt));
+    const left = value * MINUTE - (now - session.startedAt);
+    if (left <= 0) return "Time's up";
     const seconds = Math.ceil(left / 1000);
     return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} left`;
   }

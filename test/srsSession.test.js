@@ -93,7 +93,7 @@ test('Endless only ends on request; "Review N missed cards" runs the wrap-up fir
 test('progress labels for count, timer and endless sessions', () => {
   assert.equal(progressLabel(session({ type: 'count', value: 25 }, answers(12)), at(0)), '12 / 25');
   assert.equal(progressLabel(session({ type: 'timer', value: 5 }), at(79_000)), '3:41 left');
-  assert.equal(progressLabel(session({ type: 'timer', value: 5 }), at(9 * MINUTE)), '0:00 left');
+  assert.equal(progressLabel(session({ type: 'timer', value: 5 }), at(9 * MINUTE)), "Time's up");
   const thirtySeven = answers(37, [1, 2, 3, 4]);
   assert.equal(progressLabel(session({ type: 'endless' }, thirtySeven), at(0)), '37 answered · 89%');
 });
