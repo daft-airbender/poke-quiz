@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { getDb } from '../db/client.js';
 import { users } from '../db/schema.js';
-import { GENERATIONS } from '../quiz/pokemon.js';
+import { GENERATIONS, POKEMON_BY_ID } from '../quiz/pokemon.js';
 import { badRequest } from './errors.js';
 
 export const ROUND_LENGTHS = [10, 20, 30];
@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS = {
   roundLength: 10,
   gens: [], // [] = all generations
   autoAdvance: false,
+  theme: null, // a Pokédex number whose colors theme the app; null = the default red
 };
 
 // One check per known key.
@@ -20,6 +21,7 @@ const VALIDATORS = {
   roundLength: (value) => ROUND_LENGTHS.includes(value),
   gens: (value) => Array.isArray(value) && value.every((gen) => GENERATIONS.includes(gen)) && new Set(value).size === value.length,
   autoAdvance: (value) => typeof value === 'boolean',
+  theme: (value) => value === null || (Number.isInteger(value) && POKEMON_BY_ID.has(value)),
 };
 
 // Stored settings over the defaults, dropping unknown keys and values that are no longer valid.

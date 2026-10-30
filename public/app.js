@@ -9,6 +9,7 @@ import { Progress } from './screens/Progress.js';
 import { Quiz } from './screens/Quiz.js';
 import { Settings } from './screens/Settings.js';
 import { Summary } from './screens/Summary.js';
+import { applyTheme } from './theme.js';
 
 // The next round's choices, starting from the saved defaults. The mode isn't a setting.
 const configFrom = (settings, mode) => ({ mode, gens: settings.gens, count: settings.roundLength });
@@ -19,6 +20,7 @@ const configFrom = (settings, mode) => ({ mode, gens: settings.gens, count: sett
 function App() {
   const [user, setUser] = useState(undefined); // undefined = still checking, null = logged out
   const [catalog, setCatalog] = useState(null); // { modes, generations } from /api/modes
+  const [themes, setThemes] = useState(null); // Pokédex number -> { name, colors } from /api/themes
   const [settings, setSettings] = useState(null); // from /api/settings, reloaded on every login
   const [config, setConfig] = useState(null);
   const [screen, setScreen] = useState({ name: 'home' });
@@ -50,8 +52,10 @@ function App() {
   // Settings may have changed on another device, so fetch them on every login, not just the first.
   useEffect(() => {
     if (!user) return;
-    Promise.all([api('/api/modes'), api('/api/settings')]).then(([modes, saved]) => {
+    Promise.all([api('/api/modes'), api('/api/settings'), api('/api/themes')]).then(([modes, saved, themeList]) => {
       setCatalog(modes);
+      setThemes(themeList.themes);
+      applyTheme(themeList.themes[saved.theme]?.colors ?? null);
       setSettings(saved);
       // Start on the first mode in the list.
       setConfig(configFrom(saved, modes.modes[0].id));
@@ -67,6 +71,7 @@ function App() {
   // New defaults apply to Home right away; the selected mode stays.
   function settingsSaved(saved) {
     setSettings(saved);
+    applyTheme(themes[saved.theme]?.colors ?? null);
     setConfig(configFrom(saved, config.mode));
   }
 
@@ -119,6 +124,7 @@ function App() {
       <${Settings}
         settings=${settings}
         generations=${catalog.generations}
+        themes=${themes}
         username=${user.username}
         onSaved=${settingsSaved}
         onLogout=${logout}

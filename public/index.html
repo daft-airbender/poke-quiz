@@ -3,9 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#e3350d" />
+    <meta name="theme-color" content="#dd330c" />
     <title>Poké Quiz</title>
     <link rel="stylesheet" href="/styles.css" />
+    <script>
+      // Re-apply this device's saved Pokémon theme before the first paint (public/theme.js saves it).
+      try {
+        var theme = JSON.parse(localStorage.getItem('theme'));
+        var tokens = theme && theme[matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'];
+        for (var name in tokens) document.documentElement.style.setProperty(name, tokens[name]);
+        if (tokens) document.querySelector('meta[name="theme-color"]').setAttribute('content', tokens['--accent']);
+      } catch (e) {}
+    </script>
     <script type="importmap">
       {
         "imports": {

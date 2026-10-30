@@ -198,6 +198,7 @@ All JSON. All require auth unless noted.
 | POST | `/api/quiz/answer` | `{ questionKey, mode, correct }` → upsert progress |
 | POST | `/api/quiz/session` | record a finished round |
 | GET | `/api/progress/summary` | per-mode accuracy, weakest items, recent sessions |
+| GET | `/api/themes` | every Pokémon's name and theme palette (for the Theme setting) |
 | POST | `/api/progress/reset` | `{ confirm: true }` → delete all of the user's progress and history (not login or settings) |
 | GET | `/api/modes` | list registered modes `{ id, label, answerType }` for the home screen |
 | GET | `/api/settings` | current user's settings (merged over defaults) |
@@ -266,6 +267,7 @@ Single page, Preact + htm (see §2), mobile-first. A root `App` component holds 
   - default round length (10/20/30)
   - default generations
   - auto-advance after a correct answer (on/off)
+  - theme: a Pokédex number (or default). The app is recolored after that Pokémon's 2–3 main colors, from `data/pokemon-palettes.json` (built from the sprites by `scripts/build-palettes.js`). The setting shows the Pokémon's name and color swatches as you type; it applies on Save. Readability is guaranteed by adjusting lightness (tested for all 1,025, light and dark); green/red feedback and type colors are never themed.
   - (easy to add more keys later; defaults live in one place on the server: `DEFAULT_SETTINGS` in `src/routes/settings.js`)
   - Log out lives here (with "Logged in as …"); the header has Progress and Settings links, hidden during a round.
   - At the bottom: a red **Reset all progress** button with a confirmation dialog. It must keep covering every per-user table as the schema grows (SRS included): see `USER_DATA_TABLES`.

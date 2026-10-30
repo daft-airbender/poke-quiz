@@ -11,6 +11,7 @@
     "dev": "node --watch --env-file-if-exists=.env src/server.js",
     "start": "node src/server.js",
     "fetch:pokemon": "node scripts/fetch-pokemon.js",
+    "build:palettes": "node scripts/build-palettes.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env scripts/migrate.js",
     "create-user": "node --env-file=.env scripts/create-user.js",
@@ -27,6 +28,7 @@
     "preact": "11.1.0"
   },
   "devDependencies": {
-    "drizzle-kit": "0.31.11"
+    "drizzle-kit": "0.31.11",
+    "pngjs": "7.0.0"
   }
 }

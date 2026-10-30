@@ -4,13 +4,15 @@ import { api } from '../api.js';
 import { GenerationChips } from '../components/GenerationChips.js';
 import { Modal } from '../components/Modal.js';
 import { Segmented } from '../components/Segmented.js';
+import { ThemePicker } from '../components/ThemePicker.js';
 import { ROUND_LENGTHS } from './Home.js';
 
 // Saved to the server, so they follow me to every device. Defaults live on the server (src/routes/settings.js).
-export function Settings({ settings, generations, username, onSaved, onLogout }) {
+export function Settings({ settings, generations, themes, username, onSaved, onLogout }) {
   const [draft, setDraft] = useState(settings);
   const [status, setStatus] = useState(''); // '' | 'saving' | 'saved'
   const [error, setError] = useState('');
+  const [themeValid, setThemeValid] = useState(true);
   const update = (changes) => {
     setDraft({ ...draft, ...changes });
     setStatus('');
@@ -57,8 +59,23 @@ export function Settings({ settings, generations, username, onSaved, onLogout })
         </label>
       </section>
 
+      <section class="card stack">
+        <div>
+          <h2>Theme</h2>
+          <p class="small muted">Color the app after any Pokémon: enter its Pokédex number.</p>
+        </div>
+        <${ThemePicker}
+          value=${draft.theme}
+          themes=${themes}
+          onChange=${(theme, valid) => {
+            setThemeValid(valid);
+            if (valid) update({ theme });
+          }}
+        />
+      </section>
+
       ${error && html`<p class="error" role="alert">${error}</p>`}
-      <button type="submit" class="primary full large" disabled=${status === 'saving'}>
+      <button type="submit" class="primary full large" disabled=${status === 'saving' || !themeValid}>
         ${status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved ✓' : 'Save'}
       </button>
 

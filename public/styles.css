@@ -4,8 +4,11 @@
   --muted: #6b7080;
   --card: #ffffff;
   --border: #dfe2ea;
-  --accent: #e3350d;
+  /* Accent tokens: a Pokémon theme replaces these (and --bg) at runtime; see public/themeColors.js.
+     --accent is a fill (with --accent-text on it); --accent-ink is for text and borders. */
+  --accent: #dd330c;
   --accent-text: #ffffff;
+  --accent-ink: #c42c0a;
   --accent-soft: #fde7e1;
   --correct: #1f9d55;
   --correct-soft: #dcf5e6;
@@ -26,6 +29,8 @@
     --card: #1e2129;
     --border: #2f333e;
     --accent: #ff5a36;
+    --accent-text: #14161c;
+    --accent-ink: #ff5a36;
     --accent-soft: #3a211b;
     --correct: #3ccf7a;
     --correct-soft: #173326;
@@ -59,7 +64,7 @@ h2 {
 }
 
 h1 {
-  color: var(--accent);
+  color: var(--accent-ink);
   font-size: 1.8rem;
 }
 
@@ -115,7 +120,7 @@ p {
 
 .brand {
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .user {
@@ -141,7 +146,7 @@ button:disabled {
 }
 
 button:focus-visible {
-  outline: 3px solid var(--accent);
+  outline: 3px solid var(--accent-ink);
   outline-offset: 2px;
 }
 
@@ -186,7 +191,7 @@ button:focus-visible {
 .link {
   padding: 0;
   min-height: 0;
-  color: var(--accent);
+  color: var(--accent-ink);
   text-decoration: underline;
 }
 
@@ -246,7 +251,7 @@ button:focus-visible {
 }
 
 .mode-row.is-selected {
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
   background: var(--accent-soft);
 }
 
@@ -271,7 +276,7 @@ button:focus-visible {
 }
 
 .mode-row.is-selected .mode-info {
-  border-left-color: var(--accent);
+  border-left-color: var(--accent-ink);
 }
 
 .mode-info:hover {
@@ -314,7 +319,7 @@ button:focus-visible {
 }
 
 .segmented button.is-selected {
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
   background: var(--accent-soft);
 }
 
@@ -337,7 +342,7 @@ button:focus-visible {
 }
 
 .chip.is-selected {
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
   background: var(--accent-soft);
   font-weight: 600;
 }
@@ -361,7 +366,7 @@ button:focus-visible {
 
 .progress-bar > div {
   height: 100%;
-  background: var(--accent);
+  background: var(--accent-ink);
   transition: width 0.2s ease;
 }
 
@@ -490,7 +495,7 @@ button:focus-visible {
 
 .typed-answer input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
 }
 
 .typed-answer input.is-correct {
@@ -514,7 +519,7 @@ button:focus-visible {
 .hint {
   text-align: center;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 /* Type badges and the type picker */
@@ -581,7 +586,7 @@ button:focus-visible {
 .score {
   font-size: 2.6rem;
   font-weight: 800;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .missed-list {
@@ -620,7 +625,7 @@ button:focus-visible {
   height: 20px;
   border-radius: 50%;
   border: 3px solid var(--border);
-  border-top-color: var(--accent);
+  border-top-color: var(--accent-ink);
   animation: spin 0.8s linear infinite;
 }
 
@@ -677,7 +682,7 @@ button.brand {
 }
 
 .nav-link.is-current {
-  color: var(--accent);
+  color: var(--accent-ink);
   background: var(--accent-soft);
 }
 
@@ -724,7 +729,7 @@ button.brand {
 }
 
 .toggle input:checked {
-  background: var(--accent);
+  background: var(--accent-ink);
 }
 
 .toggle input:checked::after {
@@ -732,8 +737,59 @@ button.brand {
 }
 
 .toggle input:focus-visible {
-  outline: 3px solid var(--accent);
+  outline: 3px solid var(--accent-ink);
   outline-offset: 2px;
+}
+
+/* Theme picker */
+
+.theme-picker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.theme-number input {
+  width: 92px;
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 600;
+  text-align: center;
+  color: inherit;
+  padding: 10px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+}
+
+.theme-number input:focus {
+  outline: none;
+  border-color: var(--accent-ink);
+}
+
+.theme-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.theme-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
+.swatches {
+  display: flex;
+  gap: 6px;
+}
+
+.swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
 }
 
 /* Progress */
