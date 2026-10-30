@@ -32,9 +32,11 @@ export function newCardsLeft({ introducedToday, extraToday = 0 }, config = SRS_C
 
 // The Play scope setting ("What to learn"): which modes and generations new cards come from.
 // scope: { modes: [ids] | null, gens: [numbers] | null }; null = all. Cards with no generation
-// (type-chart cards) only depend on the mode.
-export function inPlayScope(card, scope) {
+// (type-chart cards) only depend on the mode, and so do modes that always use every generation
+// (allGenerationModes: region modes, where a generation filter would give the answer away).
+export function inPlayScope(card, scope, allGenerationModes = []) {
   if (scope?.modes && !scope.modes.includes(card.cardType)) return false;
+  if (allGenerationModes.includes(card.cardType)) return true;
   if (scope?.gens && card.generation != null && !scope.gens.includes(card.generation)) return false;
   return true;
 }

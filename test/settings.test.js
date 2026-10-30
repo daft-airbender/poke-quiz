@@ -29,3 +29,25 @@ test('parseSettingsUpdate rejects bad values', () => {
     assert.throws(() => parseSettingsUpdate(body), { status: 400 }, JSON.stringify(body));
   }
 });
+
+test('spaced-repetition settings: Play scope, last session lengths, extra new cards', () => {
+  assert.deepEqual(withDefaults({}).playScope, { modes: null, gens: null });
+  assert.deepEqual(parseSettingsUpdate({ playScope: { modes: ['type', 'name-choice'], gens: [1, 2] } }), { playScope: { modes: ['type', 'name-choice'], gens: [1, 2] } });
+  assert.deepEqual(parseSettingsUpdate({ lastLength: { play: { type: 'timer', value: 10 }, free_play: null } }).lastLength.play, { type: 'timer', value: 10 });
+  assert.deepEqual(parseSettingsUpdate({ newCardsExtra: { day: '2026-11-01', count: 10 } }), { newCardsExtra: { day: '2026-11-01', count: 10 } });
+  for (const body of [
+    { playScope: { modes: ['nope'], gens: null } },
+    { playScope: { modes: [], gens: null } },
+    { playScope: { modes: null, gens: [10] } },
+    { playScope: null },
+    { lastLength: { play: { type: 'count', value: 30 }, free_play: null } },
+    { newCardsExtra: { day: 'today', count: 10 } },
+    { newCardsExtra: { day: null, count: -1 } },
+  ]) {
+    assert.throws(() => parseSettingsUpdate(body), { status: 400 }, JSON.stringify(body));
+  }
+});
+
+test('lastLength may have a kind missing (not used yet)', () => {
+  assert.deepEqual(withDefaults({ lastLength: { play: { type: 'count', value: 10 } } }).lastLength, { play: { type: 'count', value: 10 } });
+});

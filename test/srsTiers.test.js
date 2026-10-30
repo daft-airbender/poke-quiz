@@ -191,3 +191,10 @@ test('reviewCard logs before/after values for the review log', () => {
   assert.equal(log.tierAfter, 'rotation');
   assert.equal(log.bankCounterAfter, 0);
 });
+
+test('addDays moves across month and year ends', async () => {
+  const { addDays } = await import('../src/srs/days.js');
+  assert.equal(addDays('2026-11-01', -1), '2026-10-31');
+  assert.equal(addDays('2026-12-31', 1), '2027-01-01');
+  assert.equal(addDays('2028-02-28', 1), '2028-02-29');
+});

@@ -5,7 +5,7 @@
 //   { state: 'new' | 'learning' | 'review' | 'relearning', due: Date | null, stability: number | null,
 //     difficulty: number | null, reps, lapses, learningStep, lastReviewAt: Date | null }
 // Rating: 1 again, 2 hard, 3 good, 4 easy.
-import { fsrs, generatorParameters, State } from 'ts-fsrs';
+import { computeDecayFactor, fsrs, generatorParameters, State } from 'ts-fsrs';
 import { SRS_CONFIG } from './config.js';
 
 export const RATING = Object.freeze({ again: 1, hard: 2, good: 3, easy: 4 });
@@ -73,6 +73,10 @@ export function createScheduler(config = SRS_CONFIG.fsrs, { seed } = {}) {
   }
 
   return {
+    // Forgetting-curve constants: R = (1 + factor * days / stability) ^ decay, where days is whole days
+    // since the last review. Lets the database rank cards by R the same way (src/db/srs.js).
+    curve: computeDecayFactor(params.w),
+
     // The card's memory after answering with `rating` at `now`. Pure: `memory` isn't changed.
     // Pass the real time: FSRS weighs each answer by how long it's been since the last one.
     answer(memory, rating, now) {

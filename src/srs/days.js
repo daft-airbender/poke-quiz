@@ -18,3 +18,9 @@ export function daysBetween(a, b) {
   const toUtc = (key) => Date.UTC(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, Number(key.slice(8, 10)));
   return Math.round((toUtc(b) - toUtc(a)) / (24 * 60 * 60 * 1000));
 }
+
+// The day `n` days after `key` (negative for before), e.g. addDays('2026-11-01', -1) -> '2026-10-31'.
+export function addDays(key, n) {
+  const date = new Date(Date.UTC(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, Number(key.slice(8, 10)) + n));
+  return date.toISOString().slice(0, 10);
+}

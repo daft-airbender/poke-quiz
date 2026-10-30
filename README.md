@@ -82,6 +82,7 @@ Being built in phases from [`_design_docs/pokemon-quiz-srs-spec.md`](_design_doc
 
 - `src/srs/config.js`: every SRS setting in one object (retention, learning steps, new cards per day, bank and mastery rules, …).
 - **Tables** (migration `0001_srs_tables`): `cards` (shared catalog, one row per mode question), `card_state`, `sessions`, `review_log`, `card_events`, `daily_tier_snapshot`. `npm run db:migrate` also syncs `cards` with the mode registry (`src/srs/catalog.js`, `src/db/cards.js`). `review_log` + `card_events` replay to the exact `card_state` (`src/srs/replay.js`).
+- **API** (`src/routes/play.js`, `src/db/srs.js`): start a Play / practice session, get the next card (with the Hard/Good/Easy due-date previews), answer (card state + review log in one transaction; the next card comes back in the same response), undo "Banked!"/"Mastered!", end with a summary, "Add 10 more" new cards. Not wired to the screens yet (S5).
 - `src/srs/tiers.js`, `review.js`, `queue.js`, `session.js`, `days.js`: the spec's tier, queue and session rules as pure functions (no database yet). The plan doc lists the interpretation choices made where the spec left room.
 - `src/srs/scheduler.js`: a pure wrapper around [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs) 5.4.2 (FSRS-6): `answer(card, rating, now)`, `preview(card, now)`, `retrievability(card, now)`. The rest of the app uses its card shape, never ts-fsrs types. Fuzz is seeded from the review time and card state, so replaying a card's history reproduces its due dates.
 

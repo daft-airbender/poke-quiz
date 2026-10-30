@@ -2,7 +2,9 @@ import { eq, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { getDb } from '../db/client.js';
 import { users } from '../db/schema.js';
+import { listModes } from '../quiz/modes/index.js';
 import { GENERATIONS, POKEMON_BY_ID } from '../quiz/pokemon.js';
+import { parseSessionLength } from '../srs/session.js';
 import { badRequest } from './errors.js';
 
 export const ROUND_LENGTHS = [10, 20, 30];
@@ -14,7 +16,17 @@ export const DEFAULT_SETTINGS = {
   gens: [], // [] = all generations
   autoAdvance: false,
   theme: null, // a Pokédex number whose colors theme the app; null = the default red
+  // Spaced repetition:
+  playScope: { modes: null, gens: null }, // "What to learn": which modes / generations new cards come from; null = all
+  lastLength: { play: null, free_play: null }, // last session length used, per kind; null = the default
+  newCardsExtra: { day: null, count: 0 }, // "Add 10 more" new cards: how many extra, for which New York day
 };
+
+const MODE_IDS = listModes().map((mode) => mode.id);
+const isPlainObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
+// null (= everything), or a non-empty list of distinct allowed values.
+const isListOrNull = (value, allowed) =>
+  value === null || (Array.isArray(value) && value.length > 0 && value.every((v) => allowed.includes(v)) && new Set(value).size === value.length);
 
 // One check per known key.
 const VALIDATORS = {
@@ -22,6 +34,12 @@ const VALIDATORS = {
   gens: (value) => Array.isArray(value) && value.every((gen) => GENERATIONS.includes(gen)) && new Set(value).size === value.length,
   autoAdvance: (value) => typeof value === 'boolean',
   theme: (value) => value === null || (Number.isInteger(value) && POKEMON_BY_ID.has(value)),
+  playScope: (value) => isPlainObject(value) && isListOrNull(value.modes, MODE_IDS) && isListOrNull(value.gens, GENERATIONS),
+  // A kind not used yet may be missing or null.
+  lastLength: (value) =>
+    isPlainObject(value) && ['play', 'free_play'].every((kind) => (value[kind] ?? null) === null || parseSessionLength(value[kind]) !== null),
+  newCardsExtra: (value) =>
+    isPlainObject(value) && (value.day === null || /^\d{4}-\d{2}-\d{2}$/.test(value.day)) && Number.isInteger(value.count) && value.count >= 0,
 };
 
 // Stored settings over the defaults, dropping unknown keys and values that are no longer valid.
