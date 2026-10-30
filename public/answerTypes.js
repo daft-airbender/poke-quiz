@@ -1,6 +1,6 @@
 import { html } from 'htm/preact';
 // Served at /shared/ (see src/app.js); the relative path also resolves on disk, for tests.
-import { normalizeName } from '../shared/nameMatch.js';
+import { matchName } from '../shared/nameMatch.js';
 import { MultipleChoice } from './components/MultipleChoice.js';
 import { NumberAnswer } from './components/NumberAnswer.js';
 import { TextAnswer } from './components/TextAnswer.js';
@@ -27,7 +27,7 @@ export const ANSWER_TYPES = {
   text: {
     Input: TextAnswer,
     // Spelling retries happen inside TextAnswer; by the time an answer gets here it's final.
-    isCorrect: (value, answer) => normalizeName(value) === normalizeName(answer),
+    isCorrect: (value, answer) => matchName(value, answer) === 'correct',
     display: (value) => value,
   },
   number: {

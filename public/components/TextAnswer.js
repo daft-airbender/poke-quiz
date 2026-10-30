@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { html } from 'htm/preact';
-import { matchName } from '../../shared/nameMatch.js';
+import { hasGenderSymbol, matchName } from '../../shared/nameMatch.js';
 
 // Close misspellings allowed before the answer counts as wrong.
 const MAX_CLOSE_MISSES = 3;
@@ -50,6 +50,11 @@ export function TextAnswer({ question, answer, response, onSubmit }) {
       />
       ${!answered && closeMisses > 0 &&
       html`<p class="hint" role="status">Double-check spelling. <span class="muted">${triesLeft} ${triesLeft === 1 ? 'try' : 'tries'} left</span></p>`}
+      ${!answered && closeMisses > 0 && hasGenderSymbol(answer) &&
+      html`<p class="small muted center-text">
+        Its name ends in ♀ or ♂: type <strong>f</strong> or <strong>female</strong>, <strong>m</strong> or <strong>male</strong>,
+        for example "Name f" or "Name male".
+      </p>`}
       ${!answered && html`<button type="submit" class="primary full" disabled=${!value.trim()}>Submit</button>`}
     </form>
   `;

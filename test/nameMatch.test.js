@@ -72,3 +72,20 @@ test('editDistance counts a swap as one edit', () => {
   assert.equal(editDistance('kitten', 'sitting'), 3);
   assert.equal(editDistance('', 'abc'), 3);
 });
+
+test('Nidoran♀ / Nidoran♂ can be typed without the symbols', () => {
+  for (const typed of ['Nidoran f', 'nidoranf', 'Nidoran female', 'nidoran (F)', 'Nidoran-Female', 'Nidoran♀']) {
+    assert.equal(match(typed, 'Nidoran♀'), 'correct', typed);
+  }
+  for (const typed of ['Nidoran m', 'Nidoran male', 'nidoran (M)', 'Nidoran♂']) {
+    assert.equal(match(typed, 'Nidoran♂'), 'correct', typed);
+  }
+});
+
+test('Nidoran without a readable gender gets a retry; the other Nidoran is a real mix-up', () => {
+  for (const typed of ['Nidoran', 'nidoran girl', 'Nidoran fem']) assert.equal(match(typed, 'Nidoran♀'), 'close', typed);
+  for (const typed of ['Nidoran m', 'Nidoran male', 'Nidorina']) assert.equal(match(typed, 'Nidoran♀'), 'wrong', typed);
+  assert.equal(match('Nidoran female', 'Nidoran♂'), 'wrong');
+  // Other names are unaffected: "male"/"female" only mean ♂/♀ for these two.
+  assert.equal(match('Pikachu female', 'Pikachu'), 'wrong');
+});

@@ -33,13 +33,26 @@ export function editDistance(a, b) {
   return d[a.length][b.length];
 }
 
+// Names with a ♀ / ♂ symbol (Nidoran♀, Nidoran♂), which a keyboard can't easily type.
+export const hasGenderSymbol = (name) => /[♀♂]/.test(name);
+
+// What was typed, normalized. For a ♀ / ♂ name, "female" / "male" at the end count as f / m too,
+// so "Nidoran female", "nidoran f" and "Nidoran (F)" all match Nidoran♀.
+function typedForm(typed, answer) {
+  const value = normalizeName(typed);
+  return hasGenderSymbol(answer) ? value.replace(/female$/, 'f').replace(/male$/, 'm') : value;
+}
+
 // 'correct' | 'close' | 'wrong'.
 // lookAlikes: other Pokémon names close to the answer. Typing one of those is a real mix-up, not a typo,
-// so it's 'wrong' (e.g. "Porygon-Z" when the answer is Porygon2).
+// so it's 'wrong' (e.g. "Porygon-Z" when the answer is Porygon2, or Nidoran m when it's Nidoran♀).
+// For a ♀ / ♂ name, anything starting with the rest of the name ("Nidoran", "Nidoran girl") is 'close':
+// the name is right and only the symbol needs typing, so it gets a retry with a formatting hint.
 export function matchName(typed, answer, lookAlikes = []) {
-  const value = normalizeName(typed);
+  const value = typedForm(typed, answer);
   const target = normalizeName(answer);
   if (value === target) return 'correct';
   if (lookAlikes.some((name) => normalizeName(name) === value)) return 'wrong';
+  if (hasGenderSymbol(answer) && value.startsWith(target.slice(0, -1))) return 'close';
   return editDistance(value, target) <= allowedTypos(target) ? 'close' : 'wrong';
 }

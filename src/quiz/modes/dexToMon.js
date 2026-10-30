@@ -7,7 +7,7 @@ export default {
   label: 'Pokédex # → Pokémon',
   group: 'Pokédex',
   description:
-    "Shows a National Pokédex number. Type the Pokémon's name, with the same spelling rules as Name (free text).",
+    "Shows a National Pokédex number. Type the Pokémon's name, with the same spelling rules as Name (free text) (for ♀ / ♂, type f / female or m / male).",
   example: '#025 → type “pikachu”',
   answerType: 'text',
 
