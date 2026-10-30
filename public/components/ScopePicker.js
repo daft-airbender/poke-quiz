@@ -25,7 +25,14 @@ export function ScopePicker({ modes, generations, scope, onChange }) {
     <div class="stack">
       <div class="row-between">
         <h3 class="small muted">Modes</h3>
-        <button type="button" class="link small" onClick=${() => onChange({ ...scope, modes: null })}>All modes</button>
+        <div class="select-buttons">
+          <button type="button" class="chip" disabled=${selected.length === modes.length} onClick=${() => onChange({ ...scope, modes: null })}>
+            Select all
+          </button>
+          <button type="button" class="chip" disabled=${selected.length === 0} onClick=${() => onChange({ ...scope, modes: [] })}>
+            Deselect all
+          </button>
+        </div>
       </div>
       ${groups.map(
         (group) => html`

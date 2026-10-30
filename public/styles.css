@@ -1362,3 +1362,19 @@ button.brand {
   border-color: var(--tier-bank);
   background: var(--accent-soft);
 }
+
+/* "Select all" / "Deselect all" next to a checklist heading */
+.select-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.select-buttons .chip {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+}
+
+.select-buttons .chip:disabled {
+  opacity: 0.45;
+}
