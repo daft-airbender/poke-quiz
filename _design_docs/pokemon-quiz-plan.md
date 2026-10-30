@@ -310,15 +310,15 @@ For each project:
 
 ### Render
 `render.yaml` (Blueprint):
-- Free web service, Node runtime, region matching Neon (e.g. Ohio or Virginia)
+- Free web service, Node runtime, region **Virginia** (Neon prod in AWS us-east-1); Node 26 pinned via `.node-version`
 - Build: `npm ci && npm run db:migrate`
 - Start: `npm start`
 - Health check path: `/healthz`
-- Env vars: `DATABASE_URL` (sync: false — set in dashboard), `SESSION_SECRET` (generateValue: true), `NODE_ENV=production`
+- Env vars: `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct, for migrations), both sync: false — set in dashboard; `SESSION_SECRET` (generateValue: true), `NODE_ENV=production`
 
 Run migrations in the build command (pre-deploy commands aren't available on the free tier). `npm run db:migrate` runs `scripts/migrate.js`, which only needs `drizzle-orm` + `pg` (regular dependencies). It must not depend on `drizzle-kit`: with `NODE_ENV=production`, `npm ci` skips devDependencies.
 
-After first deploy: run `node --env-file=.env.production scripts/create-user.js teddy` once **locally** with the production `DATABASE_URL` (no shell on Render's free tier).
+After first deploy: run `npm run create-user:prod teddy` (reads `.env.production`) once **locally** with the production `DATABASE_URL` (no shell on Render's free tier).
 
 ### Free-tier realities (don't "fix" these with paid features)
 - Render free service sleeps after ~15 min idle; first request is slow.
@@ -375,6 +375,7 @@ Work through these in order; stop after each and summarize what was done.
    - **Decided — charts:** plain SVG, no chart library (for now).
    - **Decided — deploy after the SRS:** milestone 10 (Deploy) stays after the SRS and its testing checkpoint.
 10. **Deploy** (after the SRS): `render.yaml`, deploy notes in README, verify end to end on phone + laptop.
+   - **Rehearsed before the first deploy:** a fresh clone, `NODE_ENV=production npm ci` (no dev dependencies), the build's `npm run db:migrate` against a brand-new empty database (all migrations + 10,101 cards; a second run changes nothing), `npm start` with `/healthz`, create-user, login over Render-style HTTPS (`X-Forwarded-Proto`), Play, Progress. Over plain HTTP no session cookie is set, as intended.
 
 ## 15. Done when
 
