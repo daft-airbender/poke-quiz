@@ -1467,3 +1467,9 @@ button.brand {
 .row-between .chip:disabled {
   opacity: 0.45;
 }
+
+/* The rating the arrow keys are on: a clear ring in the theme color. */
+.rating:focus-visible {
+  outline: 3px solid var(--accent-ink);
+  outline-offset: 3px;
+}
