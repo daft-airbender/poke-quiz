@@ -52,7 +52,7 @@ export function Home({ modes, generations, initialConfig, onStart }) {
       <section class="card stack">
         <h2>Generations</h2>
         <${GenerationChips} generations=${generations} selected=${config.gens} locked=${gensLocked} onChange=${(gens) => update({ gens })} />
-        ${gensLocked && html`<p class="muted small">${selectedMode.label} always uses every generation. Picking one would give the region away.</p>`}
+        ${gensLocked && html`<p class="muted small">${selectedMode.label} always uses every generation. ${selectedMode.allGenerationsNote}</p>`}
       </section>
 
       <section class="card stack">

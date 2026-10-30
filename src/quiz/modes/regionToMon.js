@@ -13,6 +13,7 @@ export default {
   group: 'Regions',
   // A generation filter would give the answer away (only Gen 1 = always Kanto), so rounds always use every generation.
   allGenerations: true,
+  allGenerationsNote: 'Picking one would give the region away.',
   description:
     'Shows a region. Pick which of 4 Pokémon debuted there. The wrong options come from other regions at most 2 generations away, so they look similar.',
   example: 'Kanto → Charmander (not Totodile, Mudkip or Chikorita)',

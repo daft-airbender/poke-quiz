@@ -13,7 +13,8 @@ import type from './type.js';
 // Each mode: { id, label, group, description, example, answerType, candidates(pool), question(candidate, pool, random), describe(key) }
 //   group: heading the mode is listed under on the home screen.
 //   description, example: shown in the mode's info dialog on the home screen.
-//   allGenerations (optional): the generation filter is ignored for this mode.
+//   allGenerations, allGenerationsNote (optional): the generation filter is ignored for this mode,
+//     and the note tells the home screen why.
 //   describe(key) -> { title, sprite?, attackType?, defenderTypes?, answer? } for the progress view,
 //   or null for a key it doesn't recognize.
 const MODES = [
@@ -41,7 +42,7 @@ const totals = new Map(MODES.map((mode) => [mode.id, mode.candidates(ALL_POKEMON
 
 // What the frontend needs to show the mode picker and pick an answer component.
 export function listModes() {
-  return MODES.map(({ id, label, group, description, example, answerType, allGenerations = false }) => ({
+  return MODES.map(({ id, label, group, description, example, answerType, allGenerations = false, allGenerationsNote }) => ({
     id,
     label,
     group,
@@ -49,6 +50,7 @@ export function listModes() {
     example,
     answerType,
     allGenerations,
+    allGenerationsNote,
     totalQuestions: totals.get(id),
   }));
 }

@@ -207,12 +207,9 @@ test('generation filter is respected', () => {
       assert.ok([1, 3].includes(byId.get(idFromKey(q.questionKey)).generation));
     }
   }
-  for (const modeId of ['effectiveness-dual', 'effectiveness-single']) {
+  for (const modeId of ['effectiveness-dual', 'counters-dual']) {
     for (const q of generateRound({ modeId, count: 30, gens: [1] })) {
-      // Gen 1 has no pure Flying, Dark, Steel… Pokémon; those single-type examples come from other gens.
-      if (modeId === 'effectiveness-dual' || ALL_POKEMON.some((p) => p.generation === 1 && p.types.join() === q.defenderTypes.join())) {
-        assert.equal(byName.get(q.example).generation, 1, q.questionKey);
-      }
+      assert.equal(byName.get(q.example).generation, 1, q.questionKey);
     }
   }
 });
@@ -242,8 +239,11 @@ test('every mode has a description, an example, and a question count for the inf
   }
 });
 
-test('region modes ignore the generation filter', () => {
-  assert.deepEqual(listModes().filter((m) => m.allGenerations).map((m) => m.id), ['mon-to-region', 'region-to-mon']);
+test('region and single-type modes ignore the generation filter, and say why', () => {
+  const locked = listModes().filter((m) => m.allGenerations);
+  assert.deepEqual(locked.map((m) => m.id), ['effectiveness-single', 'counters-single', 'mon-to-region', 'region-to-mon']);
+  assert.ok(locked.every((m) => m.allGenerationsNote?.length > 10));
+  assert.ok(listModes().filter((m) => !m.allGenerations).every((m) => m.allGenerationsNote === undefined));
   for (const modeId of ['mon-to-region', 'region-to-mon']) {
     const gens = new Set();
     for (let i = 0; i < 5; i++) {

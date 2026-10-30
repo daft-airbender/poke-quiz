@@ -50,7 +50,7 @@ export function progressRouter() {
     ]);
 
     const totalsByMode = new Map(totals.map((row) => [row.mode, row]));
-    const modes = listModes().map(({ description, example, allGenerations, ...mode }) => ({
+    const modes = listModes().map(({ description, example, allGenerations, allGenerationsNote, ...mode }) => ({
       ...mode,
       totalItems: mode.totalQuestions,
       itemsSeen: totalsByMode.get(mode.id)?.itemsSeen ?? 0,

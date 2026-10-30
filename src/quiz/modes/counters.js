@@ -15,6 +15,9 @@ function countersMode({ id, label, dual, description, example }) {
     id,
     label,
     group: 'Types',
+    // Single types cover all 18 whatever the generation (the filter would only change the example picture).
+    allGenerations: !dual,
+    allGenerationsNote: dual ? undefined : 'It always covers all 18 types; generations only change the example Pokémon.',
     description,
     example,
     answerType: 'types',
