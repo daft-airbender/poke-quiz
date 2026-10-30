@@ -81,6 +81,7 @@ To add a mode, create the file and list it in `src/quiz/modes/index.js`. `src/qu
 Being built in phases from [`_design_docs/pokemon-quiz-srs-spec.md`](_design_docs/pokemon-quiz-srs-spec.md); not wired into the app yet.
 
 - `src/srs/config.js`: every SRS setting in one object (retention, learning steps, new cards per day, bank and mastery rules, …).
+- `src/srs/tiers.js`, `review.js`, `queue.js`, `session.js`, `days.js`: the spec's tier, queue and session rules as pure functions (no database yet). The plan doc lists the interpretation choices made where the spec left room.
 - `src/srs/scheduler.js`: a pure wrapper around [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs) 5.4.2 (FSRS-6): `answer(card, rating, now)`, `preview(card, now)`, `retrievability(card, now)`. The rest of the app uses its card shape, never ts-fsrs types. Fuzz is seeded from the review time and card state, so replaying a card's history reproduces its due dates.
 
 ## Database

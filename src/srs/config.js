@@ -16,6 +16,7 @@ export const SRS_CONFIG = Object.freeze({
   newCardsPerDay: 20, // soft limit, counted per America/New_York day
   addMoreNewCards: 10, // the "Add 10 more" button
   repeatCooldown: Object.freeze({ cards: 8, minutes: 3 }), // don't repeat a card sooner, unless it's a due learning step
+  wrapUpWaitSeconds: 5, // a wrap-up card that was just shown, with no other to put first, waits this long
   leechLapses: 8,
   timeZone: 'America/New_York',
 
