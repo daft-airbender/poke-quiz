@@ -89,3 +89,14 @@ test('Nidoran without a readable gender gets a retry; the other Nidoran is a rea
   // Other names are unaffected: "male"/"female" only mean ♂/♀ for these two.
   assert.equal(match('Pikachu female', 'Pikachu'), 'wrong');
 });
+
+test('every Pokémon name can be typed on a plain keyboard', () => {
+  // Symbols as words, accents dropped, the curly apostrophe as a straight one.
+  const keyboard = (name) =>
+    name.replace(/♀/g, ' female').replace(/♂/g, ' male').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/’/g, "'");
+  for (const { name } of ALL_POKEMON) {
+    const typed = keyboard(name);
+    assert.match(typed, /^[\x20-\x7e]+$/, `${name} needs a character a keyboard doesn't have`);
+    assert.equal(match(typed, name), 'correct', `${name} typed as "${typed}"`);
+  }
+});
