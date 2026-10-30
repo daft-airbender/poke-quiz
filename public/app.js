@@ -3,6 +3,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { api, onSlowChange, onUnauthorized } from './api.js';
 import { Spinner, WakeUpOverlay } from './components/Loader.js';
+import { FreePlaySetup } from './screens/FreePlaySetup.js';
 import { Home } from './screens/Home.js';
 import { Login } from './screens/Login.js';
 import { Play } from './screens/Play.js';
@@ -12,8 +13,8 @@ import { Settings } from './screens/Settings.js';
 import { applyTheme } from './theme.js';
 
 // Root component: checks the session, loads modes, settings and themes, and switches between screens.
-// screen: { name: 'home' } | { name: 'play', session, next } | { name: 'summary', summary, session }
-//       | { name: 'progress' } | { name: 'settings' }
+// screen: { name: 'home' } | { name: 'free-play', length } | { name: 'play', session, next }
+//       | { name: 'summary', summary, session } | { name: 'progress' } | { name: 'settings' }
 function App() {
   const [user, setUser] = useState(undefined); // undefined = still checking, null = logged out
   const [catalog, setCatalog] = useState(null); // { modes, generations } from /api/modes
@@ -74,11 +75,14 @@ function App() {
     setSettings(saved);
   }
 
-  async function startSession(kind, length) {
+  // filter: Free Play's { modes, gens }.
+  async function startSession(kind, length, filter) {
     if (starting) return;
     setStarting(true);
     try {
-      const { session, next } = await api('/api/play/sessions', { method: 'POST', body: length ? { kind, length } : { kind } });
+      const body = { kind, ...(length && { length }), ...(filter && { filter }) };
+      const { session, next } = await api('/api/play/sessions', { method: 'POST', body });
+      if (filter) setSettings({ ...settings, freePlayFilter: session.filter });
       setScreen({ name: 'play', session, next });
     } catch (err) {
       setStartupError(err.message);
@@ -118,8 +122,20 @@ function App() {
     content = html`
       <${PlaySummary}
         summary=${screen.summary}
-        onKeepGoing=${() => startSession(screen.session.kind, screen.session.length)}
+        onKeepGoing=${() => startSession(screen.session.kind, screen.session.length, screen.session.filter)}
         onDone=${() => setScreen({ name: 'home' })}
+      />
+    `;
+  } else if (screen.name === 'free-play') {
+    content = html`
+      <${FreePlaySetup}
+        modes=${catalog.modes}
+        generations=${catalog.generations}
+        filter=${settings.freePlayFilter}
+        length=${screen.length}
+        onStart=${(length, filter) => startSession('free_play', length, filter)}
+        onSaveLength=${saveLength}
+        onBack=${() => setScreen({ name: 'home' })}
       />
     `;
   } else if (screen.name === 'progress') {
@@ -137,7 +153,11 @@ function App() {
       />
     `;
   } else {
-    content = html`<${Home} onPlay=${startSession} onSaveLength=${saveLength} />`;
+    content = html`<${Home}
+      onPlay=${startSession}
+      onFreePlay=${(length) => setScreen({ name: 'free-play', length })}
+      onSaveLength=${saveLength}
+    />`;
   }
 
   // No navigation mid-session, so a stray tap can't end one (End session is on the play screen).

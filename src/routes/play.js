@@ -11,6 +11,7 @@ import {
   nextForSession,
   playOverview,
   recordAnswer,
+  recordFreePlayAnswer,
   sessionSummary,
   startSession,
   undoTransition,
@@ -18,7 +19,7 @@ import {
 import { createScheduler } from '../srs/scheduler.js';
 import { lengthToUse, parseSessionLength } from '../srs/session.js';
 import { badRequest } from './errors.js';
-import { withDefaults } from './settings.js';
+import { parseScope, withDefaults } from './settings.js';
 
 const scheduler = createScheduler();
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -35,11 +36,12 @@ async function loadSession(req) {
   return session;
 }
 
-// Spaced-repetition play (Play and practice sessions). Free Play has its own routes.
+// Sessions: Play, practice (bank / mastered) and Free Play (which never changes scheduling).
 //   GET  /play/overview                   what Home shows: due now, new left today, tier counts, lengths
-//   POST /play/sessions                   { kind, length? } -> { session, next }
+//   POST /play/sessions                   { kind, length?, filter? (Free Play) } -> { session, next }
 //   GET  /play/sessions/:id/next          ?ending=1 after "Review N missed cards" -> next step
 //   POST /play/sessions/:id/answers       { cardId, rating, mode, isWrapup, answerMs, ending? } -> { result, next }
+//                                         Free Play: { cardId, correct, isWrapup, answerMs, ending? }
 //   POST /play/sessions/:id/end           { reason: 'limit' | 'quit' } -> { summary }
 //   GET  /play/sessions/:id/summary       -> { summary }
 //   POST /play/undo                       { cardId, logId, undo } -> { tier }
@@ -62,14 +64,19 @@ export function playRouter() {
     if (!MODES_BY_KIND[kind]) throw badRequest(`kind must be one of: ${Object.keys(MODES_BY_KIND).join(', ')}`);
     let length = parseSessionLength(req.body?.length);
     if (req.body?.length !== undefined && !length) throw badRequest('length must be { type: count, value: 10|25|50 }, { type: timer, value: 5|10|20 } or { type: endless }');
+    let filter = req.body?.filter === undefined ? undefined : parseScope(req.body.filter);
+    if (filter === null) throw badRequest('filter must be { modes: [mode ids] | null, gens: [generations] | null }');
+    if (kind !== 'free_play' && filter) throw badRequest('filter is for Free Play only');
+
     const db = getDb();
-    if (!length) {
-      const [user] = await db.select({ settings: users.settings }).from(users).where(eq(users.id, req.userId)).limit(1);
-      length = lengthToUse(withDefaults(user?.settings).lastLength.play);
-    }
-    const session = await startSession(db, req.userId, kind, length);
+    const [user] = await db.select({ settings: users.settings }).from(users).where(eq(users.id, req.userId)).limit(1);
+    const settings = withDefaults(user?.settings);
+    length ??= lengthToUse(kind === 'free_play' ? settings.lastLength.free_play : settings.lastLength.play);
+    if (kind === 'free_play') filter ??= settings.freePlayFilter;
+
+    const session = await startSession(db, req.userId, kind, length, kind === 'free_play' ? filter : null);
     const next = await nextForSession(db, req.userId, session, new Date(), scheduler);
-    res.status(201).json({ session: { id: session.id, kind, length, startedAt: session.startedAt }, next });
+    res.status(201).json({ session: { id: session.id, kind, length, filter: session.filter, startedAt: session.startedAt }, next });
   });
 
   router.get('/play/sessions/:id/next', async (req, res) => {
@@ -80,10 +87,12 @@ export function playRouter() {
   router.post('/play/sessions/:id/answers', async (req, res) => {
     const session = await loadSession(req);
     if (session.endedAt) throw Object.assign(new Error('This session has ended'), { status: 409 });
-    const { cardId, rating, mode, isWrapup = false, answerMs = null, ending = false } = req.body ?? {};
+    const { cardId, rating, mode, correct, isWrapup = false, answerMs = null, ending = false } = req.body ?? {};
+    const freePlay = session.kind === 'free_play';
     if (!Number.isInteger(cardId) || cardId < 1) throw badRequest('cardId must be a card id');
-    if (![1, 2, 3, 4].includes(rating)) throw badRequest('rating must be 1 (again), 2 (hard), 3 (good) or 4 (easy)');
-    if (!MODES_BY_KIND[session.kind].includes(mode)) throw badRequest(`mode must be one of: ${MODES_BY_KIND[session.kind].join(', ')}`);
+    if (freePlay && typeof correct !== 'boolean') throw badRequest('correct must be true or false');
+    if (!freePlay && ![1, 2, 3, 4].includes(rating)) throw badRequest('rating must be 1 (again), 2 (hard), 3 (good) or 4 (easy)');
+    if (!freePlay && !MODES_BY_KIND[session.kind].includes(mode)) throw badRequest(`mode must be one of: ${MODES_BY_KIND[session.kind].join(', ')}`);
     if (typeof isWrapup !== 'boolean' || typeof ending !== 'boolean') throw badRequest('isWrapup and ending must be true or false');
     if (answerMs !== null && !(Number.isInteger(answerMs) && answerMs >= 0 && answerMs <= MAX_ANSWER_MS)) {
       throw badRequest('answerMs must be a whole number of milliseconds');
@@ -91,7 +100,9 @@ export function playRouter() {
 
     const db = getDb();
     const now = new Date();
-    const result = await recordAnswer(db, { userId: req.userId, session, cardId, rating, mode, isWrapup, answerMs, now, scheduler });
+    const result = freePlay
+      ? await recordFreePlayAnswer(db, { userId: req.userId, session, cardId, correct, isWrapup, answerMs, now, scheduler })
+      : await recordAnswer(db, { userId: req.userId, session, cardId, rating, mode, isWrapup, answerMs, now, scheduler });
     const next = await nextForSession(db, req.userId, session, new Date(), scheduler, { ending });
     res.json({ result, next });
   });

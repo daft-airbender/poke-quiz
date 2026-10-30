@@ -9,6 +9,7 @@ import { getMode, listModes } from '../quiz/modes/index.js';
 import { questionForCard } from '../srs/catalog.js';
 import { SRS_CONFIG } from '../srs/config.js';
 import { addDays, dayKey } from '../srs/days.js';
+import { accuracyByType, shownThisPass } from '../srs/freePlay.js';
 import { inPlayScope, newCardsLeft, orderNewCards, pickNextCard, pickPracticeCard } from '../srs/queue.js';
 import { reviewCard } from '../srs/review.js';
 import { cardFromRow, rowFromCard, tierSnapshotFromJson } from '../srs/rows.js';
@@ -17,11 +18,12 @@ import { nextStep, progressLabel, summarize, wrapUpCards } from '../srs/session.
 import { newTierFields } from '../srs/tiers.js';
 import { cardEvents, cards, cardState, dailyTierSnapshot, reviewLog, sessions, users } from './schema.js';
 
-// Review-log modes each session kind may record (Free Play has its own path).
+// Review-log modes each session kind may record. Free Play answers never go through the scheduler.
 export const MODES_BY_KIND = {
   play: ['due', 'ahead', 'new', 'bank_checkin'],
   bank_practice: ['bank_practice'],
   mastered_practice: ['mastered_practice'],
+  free_play: ['free_play'],
 };
 const PRACTICE_TIER = { bank_practice: 'bank', mastered_practice: 'mastered' };
 
@@ -33,6 +35,7 @@ const NEW_PER_TYPE = 3;
 const CHECK_IN_MARGIN = 0.001;
 
 const MODE_IDS = listModes().map((mode) => mode.id);
+const MODE_LABELS = new Map(listModes().map((mode) => [mode.id, mode.label]));
 const ALL_GENERATION_MODES = listModes()
   .filter((mode) => mode.allGenerations)
   .map((mode) => mode.id);
@@ -112,12 +115,19 @@ async function rememberLength(db, userId, kind, length) {
 // ---------------------------------------------------------------------------------------------
 // Sessions
 
-export async function startSession(db, userId, kind, length) {
+// filter: Free Play's { modes, gens } (remembered as the next Free Play's default); null for other kinds.
+export async function startSession(db, userId, kind, length, filter = null) {
   const [session] = await db
     .insert(sessions)
-    .values({ userId, kind, lengthType: length.type, lengthValue: length.value ?? null })
+    .values({ userId, kind, lengthType: length.type, lengthValue: length.value ?? null, filter })
     .returning();
   await rememberLength(db, userId, kind, length);
+  if (filter) {
+    await db
+      .update(users)
+      .set({ settings: sql`${users.settings} || jsonb_build_object('freePlayFilter', ${JSON.stringify(filter)}::jsonb)` })
+      .where(eq(users.id, userId));
+  }
   return session;
 }
 
@@ -186,20 +196,26 @@ async function playCandidates(db, userId, now, scheduler, settings) {
   return { studied: [...byId.values()], newCards, newToday: today };
 }
 
-// The next unseen cards in the Play scope, in introduction order.
-async function nextNewCards(db, userId, scope) {
+// SQL condition for active cards in a { modes, gens } scope (null = all). Cards with no generation, and modes
+// that always use every generation (regions), only depend on the mode, as in inPlayScope.
+function scopeSql(scope) {
   const modes = scope?.modes ?? MODE_IDS;
-  const gensFilter = scope?.gens
+  const gens = scope?.gens
     ? sql`and (${cards.generation} is null or ${cards.generation} = any(${sql.param(scope.gens)}::int[])
         or ${cards.cardType} = any(${sql.param(ALL_GENERATION_MODES)}::text[]))`
     : sql``;
+  return sql`${cards.active} and ${cards.cardType} = any(${sql.param(modes)}::text[]) ${gens}`;
+}
+
+// The next unseen cards in the Play scope, in introduction order.
+async function nextNewCards(db, userId, scope) {
   const unseen = await db.execute(sql`
     select id, card_type, generation, sort_order, prompt_key from (
       select ${cards.id} as id, ${cards.cardType} as card_type, ${cards.generation} as generation,
         ${cards.sortOrder} as sort_order, ${cards.promptKey} as prompt_key,
         row_number() over (partition by ${cards.cardType} order by coalesce(${cards.generation}, 0), ${cards.sortOrder}) as rank
       from ${cards}
-      where ${cards.active} and ${cards.cardType} = any(${sql.param(modes)}::text[]) ${gensFilter}
+      where ${scopeSql(scope)}
         and not exists (select 1 from ${cardState} where ${cardState.userId} = ${userId} and ${cardState.cardId} = ${cards.id})
     ) ranked where rank <= ${NEW_PER_TYPE}`);
   const introducedByType = await db
@@ -259,6 +275,7 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
 
   const step = nextStep(state, now);
   if (step.step === 'done') return { step: 'done', progress };
+  if (session.kind === 'free_play') return freePlayNext(db, session, state, step, now, progress);
 
   let picked;
   let isWrapup = false;
@@ -311,6 +328,46 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
       serverNow: now.toISOString(),
     },
     progress: { ...progress, ahead: mode === 'ahead' },
+  };
+}
+
+// Free Play's next card: a random card from the filter not yet shown in this pass (spec: "Free Play").
+// No scheduling, tiers or previews; the card may never have been played in Play.
+async function freePlayNext(db, session, state, step, now, progress) {
+  let card;
+  let waitMs = 0;
+  if (step.step === 'wrapup') {
+    [card] = await db.select({ id: cards.id, promptKey: cards.promptKey }).from(cards).where(eq(cards.id, step.cardId)).limit(1);
+    waitMs = step.waitMs;
+  } else {
+    const shown = state.answers.filter((a) => !a.isWrapup).map((a) => a.cardId);
+    const poolSize = await db.$count(cards, scopeSql(session.filter));
+    const skip = [...shownThisPass(shown, poolSize)];
+    // Never the same card twice in a row, even across passes (unless it's the only one).
+    if (poolSize > 1 && shown.length) skip.push(shown.at(-1));
+    [card] = await db
+      .select({ id: cards.id, promptKey: cards.promptKey })
+      .from(cards)
+      .where(sql`${scopeSql(session.filter)} and ${cards.id} <> all(${sql.param(skip)}::int[])`)
+      .orderBy(sql`random()`)
+      .limit(1);
+  }
+  if (!card) return { step: 'done', progress };
+
+  const question = questionForCard(card.promptKey);
+  return {
+    step: 'question',
+    card: {
+      id: card.id,
+      mode: 'free_play',
+      isWrapup: step.step === 'wrapup',
+      waitMs,
+      title: getMode(question.mode).describe(card.promptKey)?.title ?? '',
+      question,
+      preview: null,
+      serverNow: now.toISOString(),
+    },
+    progress: { ...progress, ahead: false },
   };
 }
 
@@ -368,6 +425,45 @@ export async function recordAnswer(db, { userId, session, cardId, rating, mode, 
 
     return { logId: log.id, correct: rating > 1, transition: result.transition, undo: result.undo };
   });
+}
+
+// A Free Play answer: logged in review_log (mode 'free_play') with every FSRS and tier "before" value equal to
+// its "after" value, and nothing else changes: no card_state row, no tier or counter, no new-card count.
+export async function recordFreePlayAnswer(db, { userId, session, cardId, correct, isWrapup, answerMs, now, scheduler }) {
+  const [card] = await db.select({ id: cards.id }).from(cards).where(and(eq(cards.id, cardId), eq(cards.active, true))).limit(1);
+  if (!card) throw Object.assign(new Error('Unknown card'), { status: 400 });
+  const [row] = await db
+    .select()
+    .from(cardState)
+    .where(and(eq(cardState.userId, userId), eq(cardState.cardId, cardId)))
+    .limit(1);
+  const current = row ? cardFromRow(row) : { ...newTierFields(), memory: newCardMemory() };
+  const { memory } = current;
+  const [log] = await db
+    .insert(reviewLog)
+    .values({
+      userId,
+      cardId,
+      sessionId: session.id,
+      reviewedAt: now,
+      rating: correct ? 3 : 1,
+      mode: 'free_play',
+      fsrsStateBefore: memory.state,
+      stabilityBefore: memory.stability,
+      stabilityAfter: memory.stability,
+      difficultyBefore: memory.difficulty,
+      difficultyAfter: memory.difficulty,
+      retrievabilityAtReview: scheduler.retrievability(memory, now),
+      dueBefore: memory.due,
+      dueAfter: memory.due,
+      tierBefore: current.tier,
+      tierAfter: current.tier,
+      bankCounterAfter: current.bankCorrectDays,
+      isWrapup,
+      answerMs,
+    })
+    .returning({ id: reviewLog.id });
+  return { logId: log.id, correct, transition: null, undo: null };
 }
 
 const TIERS = ['rotation', 'bank', 'mastered'];
@@ -468,6 +564,13 @@ export async function sessionSummary(db, userId, session) {
     mastered: describe(summary.mastered),
     backToRotation: describe(summary.backToRotation),
     missed: describe(summary.missed),
+    // Free Play: accuracy by mode for this session (spec: "Free Play summary").
+    ...(session.kind === 'free_play' && {
+      byType: accuracyByType(answers.map((a) => ({ cardType: info.get(a.cardId)?.cardType, correct: a.rating > 1 }))).map((row) => ({
+        ...row,
+        label: MODE_LABELS.get(row.cardType) ?? row.cardType,
+      })),
+    }),
   };
 }
 

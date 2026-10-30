@@ -98,6 +98,7 @@ export const sessions = pgTable(
     lengthType: text('length_type').notNull(), // count | timer | endless
     lengthValue: integer('length_value'), // questions or minutes; null for endless
     endedReason: text('ended_reason'), // limit | quit
+    filter: jsonb('filter'), // Free Play only: { modes: ids | null, gens: numbers | null } (null = all)
   },
   (table) => [index('sessions_user_started_idx').on(table.userId, table.startedAt)],
 );

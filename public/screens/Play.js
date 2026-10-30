@@ -15,12 +15,16 @@ const MODE_TAGS = {
   ahead: 'Working ahead',
   bank_practice: 'Bank practice',
   mastered_practice: 'Mastered practice',
+  free_play: 'Free Play',
 };
+// How long "Correct!" stays up in Free Play before the next card (no rating step there).
+const FREE_PLAY_CORRECT_MS = 700;
 
-// One Play (or practice) session. The server picks every card; this screen asks the question, checks the
-// answer, collects the rating, and shows what the server sends next (spec: "Session queue", "Session length").
+// One Play, practice or Free Play session. The server picks every card; this screen asks the question, checks
+// the answer, collects the rating, and shows what the server sends next (spec: "Session queue", "Session length").
 //   Wrong answer -> saved right away as Again; the answer is shown until "Next".
 //   Right answer -> Hard / Good / Easy (keys 2 / 3 / 4, Enter = Good), then straight to the next card.
+//                   Free Play has no ratings: "Correct!" for a moment, then the next card.
 //   End session (Esc) -> "Review N missed cards" or "End now" when misses are waiting for their wrap-up.
 export function Play({ session, initialNext, onFinished, onStartSession }) {
   const [next, setNext] = useState(initialNext); // what's on screen (server payload)
@@ -39,6 +43,7 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
   const clockSkew = useRef(0); // server time minus this device's time
   const nextButton = useRef(null);
 
+  const freePlay = session.kind === 'free_play';
   const card = next.card;
   const progress = (pending ?? next).progress;
 
@@ -109,8 +114,8 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
         method: 'POST',
         body: {
           cardId: card.id,
-          rating,
-          mode: card.mode,
+          // Free Play only records right or wrong; it never schedules.
+          ...(freePlay ? { correct: rating > 1 } : { rating, mode: card.mode }),
           isWrapup: card.isWrapup,
           answerMs: Math.max(0, Math.round(answeredAt.current - shownAt.current)),
           ending,
@@ -139,7 +144,10 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
     answeredAt.current = Date.now();
     const correct = ANSWER_TYPES[card.question.answerType].isCorrect(value, card.question.answer);
     setResponse({ value, correct });
-    if (correct) {
+    if (correct && freePlay) {
+      setPhase('correct');
+      saveFreePlayCorrect();
+    } else if (correct) {
       setPhase('rating');
     } else {
       setPhase('feedback');
@@ -150,6 +158,15 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
   async function saveMiss() {
     const res = await send(1);
     if (res) setPending(res.next);
+  }
+
+  // One tap: show "Correct!" briefly, then the next card.
+  async function saveFreePlayCorrect() {
+    const started = Date.now();
+    const res = await send(3);
+    if (!res) return;
+    await new Promise((resolve) => setTimeout(resolve, Math.max(0, FREE_PLAY_CORRECT_MS - (Date.now() - started))));
+    show(res.next);
   }
 
   async function rate(rating) {
@@ -258,6 +275,7 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
           response=${response}
           onSubmit=${submit}
         />
+        ${phase === 'correct' && html`<div class="feedback is-correct" role="status">Correct!</div>`}
         ${phase === 'rating' &&
         html`
           <div class="feedback is-correct" role="status">Correct! How easy was it to remember?</div>
@@ -282,6 +300,7 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
         <div class="card stack">
           <p class="error" role="alert">${error}</p>
           ${phase === 'feedback' && !pending && html`<button type="button" class="secondary full" onClick=${saveMiss}>Try again</button>`}
+          ${phase === 'correct' && html`<button type="button" class="secondary full" onClick=${saveFreePlayCorrect}>Try again</button>`}
         </div>
       `}
       ${body}

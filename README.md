@@ -72,6 +72,7 @@ To add a mode, create the file and list it in `src/quiz/modes/index.js`. Its que
 
 - **Play** (Home) runs a spaced-repetition session: the server picks every card (due learning steps, due reviews and bank check-ins, then new cards up to 20 a day, then "working ahead"). Wrong answers are saved as Again right away; a right answer is rated Hard / Good / Easy (keys 2 / 3 / 4, Enter = Good), each button showing when the card comes back. Missed cards get one wrap-up showing before a session ends; End session (Esc) offers "Review N missed cards" or "End now".
 - The session length (10/25/50 questions, 5/10/20 minutes, Endless) is remembered; the "25 questions ▾" control under Play changes it.
+- **Free Play** (Home) quizzes on any modes and generations you pick, shuffled with no repeats until the filter is used up. One tap per right answer, no ratings. It never changes scheduling: answers only go to `review_log` (mode `free_play`, before = after values). Its filters and length are remembered separately from Play's.
 - **Settings → What to learn** picks which modes and generations new cards come from. Cards already started keep coming back for review.
 - **Progress** shows card counts per tier and recent sessions; the charts come in a later phase.
 - **Theme:** Settings → Theme takes a Pokédex number and colors the app after that Pokémon. `public/themeColors.js` turns its palette into the CSS tokens (`--accent` fill, `--accent-ink` for text/borders, `--accent-soft`, `--bg`), adjusting lightness so every theme stays readable in light and dark mode (a test checks all 1,025). Right/wrong colors and type badges never change. The computed theme is cached in the device's localStorage so `index.html` applies it before the first paint.
@@ -80,10 +81,10 @@ To add a mode, create the file and list it in `src/quiz/modes/index.js`. Its que
 
 ## Spaced repetition
 
-Built in phases from [`_design_docs/pokemon-quiz-srs-spec.md`](_design_docs/pokemon-quiz-srs-spec.md). Play is live (S5); Free Play, the Bank/Mastered screens and the full Progress screen are next.
+Built in phases from [`_design_docs/pokemon-quiz-srs-spec.md`](_design_docs/pokemon-quiz-srs-spec.md). Play (S5) and Free Play (S6) are live; the Bank/Mastered screens and the full Progress screen are next.
 
 - `src/srs/config.js`: every SRS setting in one object (retention, learning steps, new cards per day, bank and mastery rules, …).
-- **Tables** (migrations `0001_srs_tables`, `0002_retire_pre_srs_tables`): `cards` (shared catalog, one row per mode question), `card_state`, `sessions`, `review_log`, `card_events`, `daily_tier_snapshot`. `npm run db:migrate` also syncs `cards` with the mode registry (`src/srs/catalog.js`, `src/db/cards.js`). `review_log` + `card_events` replay to the exact `card_state` (`src/srs/replay.js`).
+- **Tables** (migrations `0001_srs_tables`, `0002_retire_pre_srs_tables`, `0003_free_play_filter`): `cards` (shared catalog, one row per mode question), `card_state`, `sessions`, `review_log`, `card_events`, `daily_tier_snapshot`. `npm run db:migrate` also syncs `cards` with the mode registry (`src/srs/catalog.js`, `src/db/cards.js`). `review_log` + `card_events` replay to the exact `card_state` (`src/srs/replay.js`).
 - **API** (`src/routes/play.js`, `src/db/srs.js`): start a Play / practice session, get the next card (with the Hard/Good/Easy due-date previews), answer (card state + review log in one transaction; the next card comes back in the same response), undo "Banked!"/"Mastered!", end with a summary, "Add 10 more" new cards.
 - `src/srs/tiers.js`, `review.js`, `queue.js`, `session.js`, `days.js`: the spec's tier, queue and session rules as pure functions (no database yet). The plan doc lists the interpretation choices made where the spec left room.
 - `src/srs/scheduler.js`: a pure wrapper around [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs) 5.4.2 (FSRS-6): `answer(card, rating, now)`, `preview(card, now)`, `retrievability(card, now)`. The rest of the app uses its card shape, never ts-fsrs types. Fuzz is seeded from the review time and card state, so replaying a card's history reproduces its due dates.

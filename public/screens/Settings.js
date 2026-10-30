@@ -3,7 +3,7 @@ import { html } from 'htm/preact';
 import { api } from '../api.js';
 import { Modal } from '../components/Modal.js';
 import { ThemePicker } from '../components/ThemePicker.js';
-import { WhatToLearn } from '../components/WhatToLearn.js';
+import { ScopePicker } from '../components/ScopePicker.js';
 
 // Saved to the server, so they follow me to every device. Defaults live on the server (src/routes/settings.js).
 export function Settings({ settings, modes, generations, themes, username, onSaved, onLogout }) {
@@ -39,7 +39,7 @@ export function Settings({ settings, modes, generations, themes, username, onSav
           <h2>What to learn</h2>
           <p class="small muted">New cards in Play come only from what's checked here. Cards you've already started keep coming back for review either way.</p>
         </div>
-        <${WhatToLearn} modes=${modes} generations=${generations} scope=${draft.playScope} onChange=${(playScope) => update({ playScope })} />
+        <${ScopePicker} modes=${modes} generations=${generations} scope=${draft.playScope} onChange=${(playScope) => update({ playScope })} />
       </section>
 
       <section class="card stack">

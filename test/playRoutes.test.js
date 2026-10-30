@@ -28,8 +28,16 @@ test('Play routes require a login', async () => {
   }
 });
 
-test('starting a session checks kind and length', async () => {
-  for (const body of [{}, { kind: 'free_play' }, { kind: 'nope' }, { kind: 'play', length: { type: 'count', value: 30 } }, { kind: 'play', length: 'long' }]) {
+test('starting a session checks kind, length and (Free Play) filter', async () => {
+  for (const body of [
+    {},
+    { kind: 'nope' },
+    { kind: 'play', length: { type: 'count', value: 30 } },
+    { kind: 'play', length: 'long' },
+    { kind: 'free_play', filter: { modes: [], gens: null } },
+    { kind: 'free_play', filter: { modes: ['nope'], gens: null } },
+    { kind: 'play', filter: { modes: null, gens: null } },
+  ]) {
     const res = await request('POST', '/api/play/sessions', body);
     assert.equal(res.status, 400, JSON.stringify(body));
   }

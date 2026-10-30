@@ -7,7 +7,7 @@ import { lengthLabel } from '../format.js';
 
 // Today at a glance, and Play. Play starts right away with the last length used; the small
 // "25 questions ▾" control changes it (spec: "Session length").
-export function Home({ onPlay, onSaveLength }) {
+export function Home({ onPlay, onFreePlay, onSaveLength }) {
   const [overview, setOverview] = useState(null);
   const [error, setError] = useState('');
   const [picking, setPicking] = useState(false);
@@ -67,8 +67,8 @@ export function Home({ onPlay, onSaveLength }) {
       </section>
 
       <section class="card stack">
-        <button type="button" class="secondary full" disabled>Free Play</button>
-        <p class="muted small">Quiz yourself on anything, without affecting your learning. Coming in the next update.</p>
+        <button type="button" class="secondary full" onClick=${() => onFreePlay(overview.lengths.free_play)}>Free Play</button>
+        <p class="muted small">Quiz yourself on anything you choose, without affecting your learning.</p>
       </section>
 
       ${picking && html`<${LengthPicker} value=${length} onPick=${pickLength} onClose=${() => setPicking(false)} />`}

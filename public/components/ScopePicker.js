@@ -2,10 +2,9 @@ import { html } from 'htm/preact';
 import { GenerationChips } from './GenerationChips.js';
 import { ModeInfoButton } from './ModeInfo.js';
 
-// "What to learn" (Play scope): which modes and generations Play introduces new cards from.
-// It only gates new cards: cards already started keep coming back for review.
+// Pick modes and generations: Settings → What to learn (where Play's new cards come from) and Free Play's filters.
 // modes: the mode catalog; scope: { modes: ids | null, gens: numbers | null } (null = all).
-export function WhatToLearn({ modes, generations, scope, onChange }) {
+export function ScopePicker({ modes, generations, scope, onChange }) {
   const selected = scope.modes ?? modes.map((m) => m.id);
   const gens = scope.gens ?? [];
 

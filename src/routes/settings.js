@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS = {
   playScope: { modes: null, gens: null }, // "What to learn": which modes / generations new cards come from; null = all
   lastLength: { play: null, free_play: null }, // last session length used, per kind; null = the default
   newCardsExtra: { day: null, count: 0 }, // "Add 10 more" new cards: how many extra, for which New York day
+  freePlayFilter: { modes: null, gens: null }, // the last Free Play filters used; null = all
 };
 
 const MODE_IDS = listModes().map((mode) => mode.id);
@@ -22,10 +23,30 @@ const isPlainObject = (value) => typeof value === 'object' && value !== null && 
 const isListOrNull = (value, allowed) =>
   value === null || (Array.isArray(value) && value.length > 0 && value.every((v) => allowed.includes(v)) && new Set(value).size === value.length);
 
+// { modes, gens }: which modes and generations, each null (= all) or a list.
+const isScope = (value) => isPlainObject(value) && isListOrNull(value.modes, MODE_IDS) && isListOrNull(value.gens, GENERATIONS);
+
+// Sorted, and "every mode" / "every generation" stored as null (= all), so modes or generations added later
+// are included automatically.
+function normalizeScope({ modes, gens }) {
+  const sortedModes = modes && MODE_IDS.filter((id) => modes.includes(id));
+  const sortedGens = gens && [...gens].sort((a, b) => a - b);
+  return {
+    modes: sortedModes && sortedModes.length < MODE_IDS.length ? sortedModes : null,
+    gens: sortedGens && sortedGens.length < GENERATIONS.length ? sortedGens : null,
+  };
+}
+
+// A { modes, gens } filter from (untrusted) input, normalized, or null if invalid.
+export function parseScope(value) {
+  return isScope(value) ? normalizeScope(value) : null;
+}
+
 // One check per known key.
 const VALIDATORS = {
   theme: (value) => value === null || (Number.isInteger(value) && POKEMON_BY_ID.has(value)),
-  playScope: (value) => isPlainObject(value) && isListOrNull(value.modes, MODE_IDS) && isListOrNull(value.gens, GENERATIONS),
+  playScope: (value) => isScope(value),
+  freePlayFilter: (value) => isScope(value),
   // A kind not used yet may be missing or null.
   lastLength: (value) =>
     isPlainObject(value) && ['play', 'free_play'].every((kind) => (value[kind] ?? null) === null || parseSessionLength(value[kind]) !== null),
@@ -51,17 +72,8 @@ export function parseSettingsUpdate(body) {
     if (!isValid(body[key])) throw badRequest(`Invalid value for ${key}`);
     update[key] = body[key];
   }
-  if (update.playScope) {
-    // Sorted, and "every mode" / "every generation" stored as null (= all), so modes or generations
-    // added later are included automatically.
-    const { modes, gens } = update.playScope;
-    const sortedModes = modes && MODE_IDS.filter((id) => modes.includes(id));
-    const sortedGens = gens && [...gens].sort((a, b) => a - b);
-    update.playScope = {
-      modes: sortedModes && sortedModes.length < MODE_IDS.length ? sortedModes : null,
-      gens: sortedGens && sortedGens.length < GENERATIONS.length ? sortedGens : null,
-    };
-  }
+  if (update.playScope) update.playScope = normalizeScope(update.playScope);
+  if (update.freePlayFilter) update.freePlayFilter = normalizeScope(update.freePlayFilter);
   return update;
 }
 
