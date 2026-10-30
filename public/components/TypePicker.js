@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { TYPE_COLORS, typeLabel, typeTextColor } from '../types.js';
+import { ResultMark } from './ResultMark.js';
 
 // A Pokémon has at most 2 types; modes like Counters raise the limit via question.maxSelected.
 const DEFAULT_MAX_SELECTED = 2;
@@ -40,6 +41,7 @@ export function TypePicker({ question, choices, answer, response, onSubmit }) {
               onClick=${() => toggle(type)}
             >
               ${typeLabel(type)}
+              <${ResultMark} state=${stateClass(type)} />
             </button>
           `,
         )}

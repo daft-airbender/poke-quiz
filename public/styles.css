@@ -428,7 +428,8 @@ button:focus-visible {
 .choices {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  /* Room for the result rings (3px offset + 3px ring on each side) without touching a neighbor. */
+  gap: 14px;
 }
 
 .choices-2 {
@@ -440,6 +441,7 @@ button:focus-visible {
 }
 
 .choice {
+  position: relative;
   background: var(--bg);
   border: 2px solid var(--border);
   font-weight: 600;
@@ -460,15 +462,18 @@ button:focus-visible {
   image-rendering: pixelated;
 }
 
+/* After answering: a ring outside the button, with a gap, plus a ✓ / ✗ badge (see .result-mark). */
 .choice.is-correct {
-  border-color: var(--correct);
   background: var(--correct-soft);
   color: var(--text);
+  outline: 3px solid var(--correct);
+  outline-offset: 3px;
 }
 
 .choice.is-wrong {
-  border-color: var(--wrong);
   background: var(--wrong-soft);
+  outline: 3px solid var(--wrong);
+  outline-offset: 3px;
 }
 
 .choice.is-dimmed {
@@ -563,11 +568,14 @@ button:focus-visible {
 .type-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
+  /* Room for the result rings (3px offset + 3px ring) and the ✓ / ✗ seal on the top edge. */
+  gap: 22px 12px;
+  margin-top: 8px;
+  margin-bottom: 16px;
 }
 
 .type-option {
+  position: relative;
   min-height: 46px;
   padding: 8px 4px;
   font-weight: 700;
@@ -584,20 +592,63 @@ button:focus-visible {
   opacity: 0.35;
 }
 
-/* Picked but not one of the Pokémon's types. */
+/* After answering, each marked pill keeps its type color and gets a ring outside it, with a gap, so the ring
+   reads as a mark on that pill rather than part of its edge; a ✓ / ✗ badge says what it means. */
+
+/* Picked, but not one of the answers. */
 .type-option.is-wrong {
-  border-color: var(--wrong);
-  box-shadow: 0 0 0 2px var(--wrong);
+  outline: 3px solid var(--wrong);
+  outline-offset: 3px;
 }
 
-/* Pokémon's type that wasn't picked. */
+/* An answer that wasn't picked: dashed. */
 .type-option.is-missed {
-  border: 3px dashed var(--correct);
+  outline: 3px dashed var(--correct);
+  outline-offset: 3px;
 }
 
-/* Correct pick: keeps its type color (set inline), with a green ring. */
+/* Picked and right: solid. */
 .type-option.is-correct {
-  border-color: var(--correct);
+  outline: 3px solid var(--correct);
+  outline-offset: 3px;
+}
+
+/* ✓ / ✗ badge on a marked pill or choice, so the meaning never rests on green vs. red. On a type pill it's a
+   seal centered on the top edge (pills are narrow; this never covers the label or reaches a neighbor); on a
+   wide choice button it sits inside the right end. */
+.result-mark {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--card);
+  background: var(--correct);
+  box-shadow: 0 0 0 2px var(--card);
+}
+
+.result-mark.wrong {
+  background: var(--wrong);
+}
+
+.choice .result-mark {
+  top: 50%;
+  left: auto;
+  right: 10px;
+  transform: translateY(-50%);
+}
+
+/* Missed answer: an outlined ✓, matching its dashed ring. */
+.result-mark.missed {
+  color: var(--correct);
+  background: var(--card);
   box-shadow: 0 0 0 2px var(--correct);
 }
 

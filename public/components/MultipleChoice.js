@@ -1,4 +1,5 @@
 import { html } from 'htm/preact';
+import { ResultMark } from './ResultMark.js';
 
 // Short options (0×, ½×…) sit 2 or 3 to a row; long lists (regions) use 2 columns; names get a row each.
 function layoutClass(choices, withSprites) {
@@ -34,6 +35,7 @@ export function MultipleChoice({ question, choices, answer, response, onSubmit }
           >
             ${sprites?.[choice] && html`<img src=${sprites[choice]} alt="" width="96" height="96" />`}
             ${choice}
+            <${ResultMark} state=${stateClass(choice)} />
           </button>
         `,
       )}
