@@ -126,19 +126,28 @@ test('Play scope: which modes and generations new cards come from', () => {
   assert.equal(inPlayScope({ cardType: 'anything', generation: 9 }, { modes: null, gens: null }), true, 'null = everything');
 });
 
-test('new cards take turns between card types, each in generation then catalog order', () => {
+test('new cards take turns between card types, in random order within each type', () => {
   const cards = [
-    unseen('t2', 'type', 1, 2),
     unseen('t1', 'type', 1, 1),
+    unseen('t2', 'type', 1, 2),
     unseen('t152', 'type', 2, 152),
     unseen('n1', 'name-choice', 1, 1),
     unseen('n2', 'name-choice', 1, 2),
     unseen('e1', 'effectiveness-single', null, 1),
   ];
   const order = ['name-choice', 'type', 'effectiveness-single'];
-  assert.deepEqual(orderNewCards(cards, {}, order).map((c) => c.id), ['n1', 't1', 'e1', 'n2', 't2', 't152']);
+  const typeOf = (id) => cards.find((c) => c.id === id).cardType;
+  const result = orderNewCards(cards, {}, order).map((c) => c.id);
+  assert.deepEqual(result.map(typeOf), ['name-choice', 'type', 'effectiveness-single', 'name-choice', 'type', 'type'], 'types take turns');
+  assert.deepEqual([...result].sort(), cards.map((c) => c.id).sort(), 'every card once');
   // A type that's behind catches up first.
-  assert.deepEqual(orderNewCards(cards, { 'name-choice': 5, type: 5 }, order).map((c) => c.id).slice(0, 2), ['e1', 'n1']);
+  assert.deepEqual(orderNewCards(cards, { 'name-choice': 5, type: 5 }, order).map((c) => c.id)[0], 'e1');
+  // Within a type the order is random, not Pokédex order.
+  let seed = 3;
+  const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const many = Array.from({ length: 40 }, (_, i) => unseen(`t${i + 1}`, 'type', 1, i + 1));
+  const firstPicks = new Set(Array.from({ length: 10 }, () => orderNewCards(many, {}, ['type'], random)[0].id));
+  assert.ok(firstPicks.size > 5, `first new card varies: ${[...firstPicks].join(' ')}`);
 });
 
 test('practice sessions draw only from their tier, lowest R first', () => {

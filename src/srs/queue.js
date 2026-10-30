@@ -9,6 +9,7 @@
 //   5. nothing left: return null with what can be offered (more new cards, practice the bank)
 // Mastered cards never appear. Banked cards only appear as check-ins.
 import { SRS_CONFIG } from './config.js';
+import { shuffle } from '../quiz/random.js';
 import { bankAnswerWouldCount } from './tiers.js';
 
 const MINUTE = 60 * 1000;
@@ -42,15 +43,15 @@ export function inPlayScope(card, scope, allGenerationModes = []) {
   return true;
 }
 
-// The order new cards are introduced in: take turns between card types (so one Pokémon doesn't arrive
-// seven ways at once), and within a type go by generation, then catalog order (e.g. Pokédex number).
-//   unseen:      cards never answered, each { id, cardType, generation, order }
+// The order new cards are introduced in: card types take turns (so one mode doesn't fill a session, and one
+// Pokémon doesn't arrive seven ways at once); within a type, random (not Pokédex order).
+//   unseen:      cards never answered, each { id, cardType, ... }
 //   studiedByType: { [cardType]: number of cards of that type already introduced }
 //   typeOrder:   card types in registry order, for ties
-export function orderNewCards(unseen, studiedByType, typeOrder) {
+export function orderNewCards(unseen, studiedByType, typeOrder, random = Math.random) {
   const queues = new Map(typeOrder.map((type) => [type, []]));
   for (const card of unseen) queues.get(card.cardType)?.push(card);
-  for (const queue of queues.values()) queue.sort((a, b) => (a.generation ?? 0) - (b.generation ?? 0) || a.order - b.order);
+  for (const [type, queue] of queues) queues.set(type, shuffle(queue, random));
 
   const counts = new Map(typeOrder.map((type) => [type, studiedByType[type] ?? 0]));
   const ordered = [];

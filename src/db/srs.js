@@ -216,13 +216,14 @@ function scopeSql(scope) {
   return sql`${cards.active} and ${cards.cardType} = any(${sql.param(modes)}::text[]) ${gens}`;
 }
 
-// The next unseen cards in the Play scope, in introduction order.
+// The next unseen cards in the Play scope, in introduction order: a few random ones per card type, then
+// orderNewCards takes turns between types.
 async function nextNewCards(db, userId, scope) {
   const unseen = await db.execute(sql`
     select id, card_type, generation, sort_order, prompt_key from (
       select ${cards.id} as id, ${cards.cardType} as card_type, ${cards.generation} as generation,
         ${cards.sortOrder} as sort_order, ${cards.promptKey} as prompt_key,
-        row_number() over (partition by ${cards.cardType} order by coalesce(${cards.generation}, 0), ${cards.sortOrder}) as rank
+        row_number() over (partition by ${cards.cardType} order by random()) as rank
       from ${cards}
       where ${scopeSql(scope)}
         and not exists (select 1 from ${cardState} where ${cardState.userId} = ${userId} and ${cardState.cardId} = ${cards.id})
