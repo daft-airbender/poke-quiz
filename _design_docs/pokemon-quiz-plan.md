@@ -374,6 +374,7 @@ Work through these in order; stop after each and summarize what was done.
    - **Decided — library:** `ts-fsrs` **5.4.2** (FSRS-6; matches the spec's stability/difficulty model). Not 6.x, whose default FSRS-7 model stores an extra per-card value.
    - **Decided — charts:** plain SVG, no chart library (for now).
    - **Decided — deploy after the SRS:** milestone 10 (Deploy) stays after the SRS and its testing checkpoint.
+   - **Round flow (after first deploy):** the score counts only the first answer to each card in a round, so wrap-ups and repeats don't score (summary, Endless label, Recent rounds, Free Play stats, the activity calendar's % correct; the calendar's answer counts still include everything, as activity). Rounds that end with misses show a "Start review" message; no misses goes straight to results. Wrap-up answers aren't rated and don't schedule: `review_log` mode `wrapup`, before = after values, skipped by replay. Older wrap-up rows did schedule and keep their real mode, so they still replay. Database tests: `npm run test:db`.
 10. **Deploy** (after the SRS): `render.yaml`, deploy notes in README, verify end to end on phone + laptop.
    - **Rehearsed before the first deploy:** a fresh clone, `NODE_ENV=production npm ci` (no dev dependencies), the build's `npm run db:migrate` against a brand-new empty database (all migrations + 10,101 cards; a second run changes nothing), `npm start` with `/healthz`, create-user, login over Render-style HTTPS (`X-Forwarded-Proto`), Play, Progress. Over plain HTTP no session cookie is set, as intended.
 

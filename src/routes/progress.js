@@ -2,13 +2,14 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { Router } from 'express';
 import { getDb } from '../db/client.js';
 import { reviewLog, sessions } from '../db/schema.js';
-import { progressStats } from '../db/stats.js';
+import { firstAttemptSql, progressStats } from '../db/stats.js';
 import { deleteUserData } from '../db/userData.js';
 import { badRequest } from './errors.js';
 
 const RECENT_SESSIONS = 10;
 
-// The last few sessions that had answers: [{ kind, startedAt, answered, correct }].
+// The last few sessions that had answers: [{ kind, startedAt, answered, correct }], scored like the end-of-session
+// summary: first attempts only.
 async function recentSessions(db, userId) {
   const recent = await db
     .select({ id: sessions.id, kind: sessions.kind, startedAt: sessions.startedAt })
@@ -20,8 +21,8 @@ async function recentSessions(db, userId) {
   const counts = await db
     .select({
       sessionId: reviewLog.sessionId,
-      answered: sql`count(*)`.mapWith(Number),
-      correct: sql`count(*) filter (where ${reviewLog.rating} > 1)`.mapWith(Number),
+      answered: sql`count(*) filter (where ${firstAttemptSql})`.mapWith(Number),
+      correct: sql`count(*) filter (where ${reviewLog.rating} > 1 and ${firstAttemptSql})`.mapWith(Number),
     })
     .from(reviewLog)
     .where(inArray(reviewLog.sessionId, recent.map((s) => s.id)))

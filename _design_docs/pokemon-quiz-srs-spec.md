@@ -119,6 +119,8 @@ Rules:
 - **Wrap-up for misses**: when the limit is reached (count or timer), any card I missed during the session and haven't since answered correctly comes back **once more** before the session ends, so I don't finish on a miss. These wrap-up questions go past the limit, and the screen labels them "Wrap-up".
   - Cooldown still applies. If the card was just shown, put another wrap-up card first, or wait briefly if there's no other.
   - Each card gets at most one wrap-up showing. If I miss it again, it stays in its normal relearning schedule for next time.
+  - **A message comes first:** when the round ends with misses, "That was the last question! Now let's review the ones you missed." (timer: "Time's up!") with one button, "Start review". With no misses, go straight to the results. If the timer ran out mid-question, the message comes after that question is answered, and the answer counts like any other.
+  - **Wrap-up answers aren't rated:** no difficulty buttons, only right or wrong and a "Next" button. They don't change FSRS or tiers (the first-attempt miss is the rating that counts) and they don't count toward the session's score or any "correct" figure on Progress. Only the first answer to a card in a round scores.
 - **End session button**: always visible during play in every mode, and the only way out of Endless. Keyboard shortcut: Esc.
   - If there are missed cards waiting for wrap-up, ask: **"Review N missed cards"** (does the wrap-up, then shows the summary) or **"End now"** (goes straight to the summary).
   - If there aren't, end right away and show the summary.
@@ -441,7 +443,7 @@ pickNextCard(candidates, now, config, sessionRecent): Card | null;
 - A 10-question session ends after 10 answers plus any wrap-up questions.
 - A card missed during the session and not since answered correctly gets exactly one wrap-up showing; one that was later answered correctly gets none.
 - A timer session finishes the current question when time runs out, then does wrap-up.
-- Wrap-up answers update FSRS and tiers like any other answer.
+- Wrap-up answers don't change FSRS or tiers, and don't count toward the session's score.
 - The last-used length is remembered and becomes the default next time.
 - The summary's lists of banked / mastered / back-to-rotation cards match the `review_log` rows for that session.
 

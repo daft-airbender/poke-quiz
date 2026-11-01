@@ -23,6 +23,8 @@ const FREE_PLAY_CORRECT_MS = 700;
 // One Play, practice or Free Play session. The server picks every card; this screen asks the question, checks
 // the answer, collects the rating, and shows what the server sends next (spec: "Session queue", "Session length").
 //   Wrong answer -> saved right away as Again; the answer is shown until "Next".
+//   End of the round -> if cards were missed, a "Start review" message, then the wrap-up. Otherwise straight to results.
+//   Wrap-up answer -> saved as right or wrong, never rated; the result is shown until "Next".
 //   Right answer -> Hard / Good / Easy (keys 2 / 3 / 4, Enter = Good), then straight to the next card.
 //                   Free Play has no ratings: "Correct!" for a moment, then the next card.
 //   End session (Esc) -> "Review N missed cards" or "End now" when misses are waiting for their wrap-up.
@@ -36,6 +38,8 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
   const [toast, setToast] = useState(null); // { message, undo? }
   const [endDialog, setEndDialog] = useState(false);
   const [ending, setEnding] = useState(false); // "Review N missed cards" was chosen
+  const [reviewIntro, setReviewIntro] = useState(null); // the first wrap-up card, held until "Start review"
+  const reviewAnnounced = useRef(false);
   const [waiting, setWaiting] = useState(initialNext.card?.waitMs > 0); // a wrap-up card held for a few seconds
   const [, setTick] = useState(0);
   const shownAt = useRef(Date.now());
@@ -45,7 +49,7 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
 
   const freePlay = session.kind === 'free_play';
   const card = next.card;
-  const progress = (pending ?? next).progress;
+  const progress = (pending ?? reviewIntro ?? next).progress;
 
   // Shows what the server sent next. The per-card state resets in the same update, so an answer
   // can never land on the old card's state (or be wiped by a later reset).
@@ -53,6 +57,11 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
     setPhase('answering');
     setResponse(null);
     setPending(null);
+    if (payload.card?.isWrapup && !reviewAnnounced.current) {
+      reviewAnnounced.current = true;
+      setReviewIntro(payload);
+      return;
+    }
     setWaiting(payload.card?.waitMs > 0);
     setNext(payload);
   }
@@ -90,7 +99,7 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
   // A layout effect, so the listener is in place the moment the screen renders.
   useLayoutEffect(() => {
     function onKey(event) {
-      if (event.key === 'Escape' && !endDialog) {
+      if (event.key === 'Escape' && !endDialog && !reviewIntro) {
         event.preventDefault();
         requestEnd();
       } else if (phase === 'rating' && !busy && ['2', '3', '4'].includes(event.key)) {
@@ -114,8 +123,8 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
         method: 'POST',
         body: {
           cardId: card.id,
-          // Free Play only records right or wrong; it never schedules.
-          ...(freePlay ? { correct: rating > 1 } : { rating, mode: card.mode }),
+          // Free Play and wrap-up reviews only record right or wrong; they never schedule.
+          ...(freePlay || card.isWrapup ? { correct: rating > 1 } : { rating, mode: card.mode }),
           isWrapup: card.isWrapup,
           answerMs: Math.max(0, Math.round(answeredAt.current - shownAt.current)),
           ending,
@@ -144,20 +153,30 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
     answeredAt.current = Date.now();
     const correct = ANSWER_TYPES[card.question.answerType].isCorrect(value, card.question.answer);
     setResponse({ value, correct });
-    if (correct && freePlay) {
+    if (card.isWrapup) {
+      setPhase('feedback');
+      saveThenWait(correct ? 3 : 1);
+    } else if (correct && freePlay) {
       setPhase('correct');
       saveFreePlayCorrect();
     } else if (correct) {
       setPhase('rating');
     } else {
       setPhase('feedback');
-      saveMiss();
+      saveThenWait(1);
     }
   }
 
-  async function saveMiss() {
-    const res = await send(1);
+  // Saves the answer now; what comes next waits for "Next".
+  async function saveThenWait(rating) {
+    const res = await send(rating);
     if (res) setPending(res.next);
+  }
+
+  function startReview() {
+    if (!reviewIntro) return;
+    setReviewIntro(null);
+    show(reviewIntro);
   }
 
   // One tap: show "Correct!" briefly, then the next card.
@@ -195,6 +214,7 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
   async function reviewMissed() {
     setEndDialog(false);
     setEnding(true);
+    reviewAnnounced.current = true; // they just chose the review, so no need to announce it
     try {
       show(await api(`/api/play/sessions/${session.id}/next?ending=1`));
     } catch (err) {
@@ -242,7 +262,7 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
       ? progress?.label
       : timeLeft > 0
         ? `${clock(timeLeft)} left`
-        : card?.isWrapup
+        : card?.isWrapup || reviewIntro
           ? "Time's up · reviewing misses"
           : "Time's up · last question";
 
@@ -250,12 +270,14 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
     <div class="quiz-status">
       <button type="button" class="link" onClick=${requestEnd} aria-keyshortcuts="Escape">End session</button>
       <span>${label}</span>
-      <span class="play-tag">${card ? (card.isWrapup ? 'Wrap-up' : MODE_TAGS[card.mode]) : ''}</span>
+      <span class="play-tag">${card ? (card.isWrapup || reviewIntro ? 'Wrap-up' : MODE_TAGS[card.mode]) : ''}</span>
     </div>
   `;
 
   let body;
-  if (next.step === 'empty') {
+  if (reviewIntro) {
+    body = html`<section class="card"><p class="muted center">Round complete.</p></section>`;
+  } else if (next.step === 'empty') {
     body = html`
       <section class="card stack center">
         <h2>All caught up</h2>
@@ -305,7 +327,9 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
         `}
         ${phase === 'feedback' &&
         html`
-          <div class="feedback is-wrong" role="status">Answer: <strong>${answerType.display(card.question.answer)}</strong></div>
+          ${response.correct
+            ? html`<div class="feedback is-correct" role="status">Correct!</div>`
+            : html`<div class="feedback is-wrong" role="status">Answer: <strong>${answerType.display(card.question.answer)}</strong></div>`}
           <button type="button" class="primary full" ref=${nextButton} disabled=${!pending} onClick=${() => show(pending)}>
             ${pending ? 'Next' : 'Saving…'}
           </button>
@@ -321,7 +345,7 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
       html`
         <div class="card stack">
           <p class="error" role="alert">${error}</p>
-          ${phase === 'feedback' && !pending && html`<button type="button" class="secondary full" onClick=${saveMiss}>Try again</button>`}
+          ${phase === 'feedback' && !pending && html`<button type="button" class="secondary full" onClick=${() => saveThenWait(response.correct ? 3 : 1)}>Try again</button>`}
           ${phase === 'correct' && html`<button type="button" class="secondary full" onClick=${saveFreePlayCorrect}>Try again</button>`}
         </div>
       `}
@@ -337,6 +361,13 @@ export function Play({ session, initialNext, onFinished, onStartSession }) {
             Review ${progress.wrapUpPending} missed ${progress.wrapUpPending === 1 ? 'card' : 'cards'}
           </button>
           <button type="button" class="secondary full" onClick=${() => finish('quit')}>End now</button>
+        <//>
+      `}
+      ${reviewIntro &&
+      html`
+        <${Modal} title=${session.length.type === 'timer' ? "Time's up!" : 'That was the last question!'} onClose=${startReview}>
+          <p>Now let's review the ${reviewIntro.progress.wrapUpPending === 1 ? 'one' : 'ones'} you missed.</p>
+          <button type="button" class="primary full" onClick=${startReview}>Start review</button>
         <//>
       `}
       ${toast &&

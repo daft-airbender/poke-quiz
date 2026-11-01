@@ -1,6 +1,7 @@
 // Everything the Progress screen shows (spec: "Progress screen"), aggregated in SQL so only small results
 // leave the database. Days are New York calendar days; weeks start on Monday.
 import { and, asc, eq, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { listModes } from '../quiz/modes/index.js';
 import { SRS_CONFIG } from '../srs/config.js';
 import { addDays, dayKey } from '../srs/days.js';
@@ -16,12 +17,20 @@ const MODE_IDS = listModes().map((m) => m.id);
 const nyDay = (column) => sql`(${column} at time zone ${TZ})::date::text`;
 const nyWeek = (column) => sql`date_trunc('week', ${column} at time zone ${TZ})::date::text`;
 
+// A review_log row that scores: the first answer to its card in its round, not a wrap-up review or a repeat.
+// (Same rule as firstAttempts in src/srs/session.js.)
+const earlier = alias(reviewLog, 'earlier');
+export const firstAttemptSql = sql`(not ${reviewLog.isWrapup} and not exists (
+  select 1 from ${reviewLog} as earlier
+  where ${earlier.sessionId} = ${reviewLog.sessionId} and ${earlier.cardId} = ${reviewLog.cardId} and ${earlier.id} < ${reviewLog.id}
+))`;
+
 // The tier changes that rebuild daily_tier_snapshot: every scheduled answer and every card_event, in time order.
 async function tierChanges(db, userId) {
   const result = await db.execute(sql`
     select card_id, at, tier_after from (
       select ${reviewLog.cardId} as card_id, ${reviewLog.reviewedAt} as at, ${reviewLog.tierAfter} as tier_after, 0 as kind, ${reviewLog.id} as id
-      from ${reviewLog} where ${reviewLog.userId} = ${userId} and ${reviewLog.mode} <> 'free_play'
+      from ${reviewLog} where ${reviewLog.userId} = ${userId} and ${reviewLog.mode} not in ('free_play', 'wrapup')
       union all
       select ${cardEvents.cardId}, ${cardEvents.at}, ${cardEvents.tierAfter}, 1, ${cardEvents.id}
       from ${cardEvents} where ${cardEvents.userId} = ${userId}
@@ -90,21 +99,24 @@ async function recallByWeek(db, userId) {
   return result.rows.map((row) => ({ week: row.week, qualifying: row.qualifying, correct: row.correct }));
 }
 
-// Answers per day: [{ day, play, freePlay, correct }], for the calendar (last 53 weeks) and the streak (all time).
+// Answers per day: [{ day, play, freePlay, scored, correct }], for the calendar (last 53 weeks) and the streak
+// (all time). play and freePlay count every answer, as activity; scored and correct are first attempts only.
 async function activityByDay(db, userId) {
   const result = await db.execute(sql`
     select ${nyDay(reviewLog.reviewedAt)} as day,
       count(*) filter (where ${reviewLog.mode} <> 'free_play')::int as play,
       count(*) filter (where ${reviewLog.mode} = 'free_play')::int as free_play,
-      count(*) filter (where ${reviewLog.rating} > 1)::int as correct
+      count(*) filter (where ${firstAttemptSql})::int as scored,
+      count(*) filter (where ${reviewLog.rating} > 1 and ${firstAttemptSql})::int as correct
     from ${reviewLog} where ${reviewLog.userId} = ${userId}
     group by 1 order by 1`);
-  return result.rows.map((row) => ({ day: row.day, play: row.play, freePlay: row.free_play, correct: row.correct }));
+  return result.rows.map((row) => ({ day: row.day, play: row.play, freePlay: row.free_play, scored: row.scored, correct: row.correct }));
 }
 
-// Free Play's own numbers: weekly accuracy, accuracy by card type and generation, and the most-missed cards.
+// Free Play's own numbers, first attempts only: weekly accuracy, accuracy by card type and generation, and the
+// most-missed cards.
 async function freePlayStats(db, userId) {
-  const freePlay = sql`${reviewLog.userId} = ${userId} and ${reviewLog.mode} = 'free_play'`;
+  const freePlay = sql`${reviewLog.userId} = ${userId} and ${reviewLog.mode} = 'free_play' and ${firstAttemptSql}`;
   const [weeks, byMode, byGen, missed] = await Promise.all([
     db.execute(sql`select ${nyWeek(reviewLog.reviewedAt)} as week, count(*)::int as answered,
       count(*) filter (where ${reviewLog.rating} > 1)::int as correct

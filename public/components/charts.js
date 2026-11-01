@@ -314,7 +314,7 @@ export function ActivityCalendar({ days, streakDays, today }) {
             { label: 'answered', value: answered.toLocaleString() },
             { label: 'in Play', value: (c.data.play ?? 0).toLocaleString() },
             { label: 'in Free Play', value: (c.data.freePlay ?? 0).toLocaleString() },
-            { label: 'correct', value: percent(c.data.correct / answered) },
+            { label: 'correct', value: c.data.scored ? percent(c.data.correct / c.data.scored) : '—' },
           ]
         : [{ label: 'no answers', value: '0' }],
       note: streak.has(c.day) ? 'Part of your current streak' : null,

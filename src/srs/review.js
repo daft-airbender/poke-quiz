@@ -3,7 +3,32 @@
 import { SRS_CONFIG } from './config.js';
 import { snapshotTier, applyTierRules } from './tiers.js';
 
-// card: { memory, tier, ...tier fields } (see tiers.js). Free Play never comes through here: it doesn't schedule.
+// Answers that are logged but never schedule: Free Play, and wrap-up reviews of missed cards in Play and practice
+// (the first-attempt miss is the rating that counts). Older wrap-up rows did schedule; they keep their real mode.
+export const UNSCHEDULED_MODES = ['free_play', 'wrapup'];
+
+// The review_log values for an unscheduled answer: rating 1 = wrong, 3 = right, and every FSRS and tier "before"
+// value equal to its "after" value. The card itself doesn't change.
+export function unscheduledLog(card, correct, now, { scheduler }) {
+  const { memory } = card;
+  return {
+    rating: correct ? 3 : 1,
+    reviewedAt: now,
+    fsrsStateBefore: memory.state,
+    stabilityBefore: memory.stability,
+    stabilityAfter: memory.stability,
+    difficultyBefore: memory.difficulty,
+    difficultyAfter: memory.difficulty,
+    retrievabilityAtReview: scheduler.retrievability(memory, now),
+    dueBefore: memory.due,
+    dueAfter: memory.due,
+    tierBefore: card.tier,
+    tierAfter: card.tier,
+    bankCounterAfter: card.bankCorrectDays,
+  };
+}
+
+// card: { memory, tier, ...tier fields } (see tiers.js). Unscheduled answers never come through here.
 // Returns { card, transition, undo, log }:
 //   transition: 'banked' | 'mastered' | 'back_to_rotation' | null (for the "Banked!" / "Mastered!" messages)
 //   undo:       the tier fields from before, for a one-tap Undo of that transition

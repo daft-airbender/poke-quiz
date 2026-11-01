@@ -175,7 +175,7 @@ export function Progress({ onOpenCards }) {
             { label: 'Day', value: (d) => formatDay(d.day) },
             { label: 'Play', value: (d) => d.play },
             { label: 'Free Play', value: (d) => d.freePlay },
-            { label: 'Correct', value: (d) => percent(d.correct / (d.play + d.freePlay)) },
+            { label: 'Correct', value: (d) => (d.scored ? percent(d.correct / d.scored) : '—') },
           ]}
           rows=${[...activity].reverse()}
         />`}

@@ -11,7 +11,7 @@ import {
   nextForSession,
   playOverview,
   recordAnswer,
-  recordFreePlayAnswer,
+  recordUnscheduledAnswer,
   sessionSummary,
   startSession,
   undoTransition,
@@ -41,7 +41,7 @@ async function loadSession(req) {
 //   POST /play/sessions                   { kind, length?, filter? (Free Play) } -> { session, next }
 //   GET  /play/sessions/:id/next          ?ending=1 after "Review N missed cards" -> next step
 //   POST /play/sessions/:id/answers       { cardId, rating, mode, isWrapup, answerMs, ending? } -> { result, next }
-//                                         Free Play: { cardId, correct, isWrapup, answerMs, ending? }
+//                                         Free Play and wrap-up: { cardId, correct, isWrapup, answerMs, ending? }
 //   POST /play/sessions/:id/end           { reason: 'limit' | 'quit' } -> { summary }
 //   GET  /play/sessions/:id/summary       -> { summary }
 //   POST /play/undo                       { cardId, logId, undo } -> { tier }
@@ -90,18 +90,20 @@ export function playRouter() {
     const { cardId, rating, mode, correct, isWrapup = false, answerMs = null, ending = false } = req.body ?? {};
     const freePlay = session.kind === 'free_play';
     if (!Number.isInteger(cardId) || cardId < 1) throw badRequest('cardId must be a card id');
-    if (freePlay && typeof correct !== 'boolean') throw badRequest('correct must be true or false');
-    if (!freePlay && ![1, 2, 3, 4].includes(rating)) throw badRequest('rating must be 1 (again), 2 (hard), 3 (good) or 4 (easy)');
-    if (!freePlay && !MODES_BY_KIND[session.kind].includes(mode)) throw badRequest(`mode must be one of: ${MODES_BY_KIND[session.kind].join(', ')}`);
     if (typeof isWrapup !== 'boolean' || typeof ending !== 'boolean') throw badRequest('isWrapup and ending must be true or false');
+    // Free Play and wrap-up reviews only record right or wrong; everything else is rated and scheduled.
+    const unscheduled = freePlay || isWrapup;
+    if (unscheduled && typeof correct !== 'boolean') throw badRequest('correct must be true or false');
+    if (!unscheduled && ![1, 2, 3, 4].includes(rating)) throw badRequest('rating must be 1 (again), 2 (hard), 3 (good) or 4 (easy)');
+    if (!unscheduled && !MODES_BY_KIND[session.kind].includes(mode)) throw badRequest(`mode must be one of: ${MODES_BY_KIND[session.kind].join(', ')}`);
     if (answerMs !== null && !(Number.isInteger(answerMs) && answerMs >= 0 && answerMs <= MAX_ANSWER_MS)) {
       throw badRequest('answerMs must be a whole number of milliseconds');
     }
 
     const db = getDb();
     const now = new Date();
-    const result = freePlay
-      ? await recordFreePlayAnswer(db, { userId: req.userId, session, cardId, correct, isWrapup, answerMs, now, scheduler })
+    const result = unscheduled
+      ? await recordUnscheduledAnswer(db, { userId: req.userId, session, cardId, mode: freePlay ? 'free_play' : 'wrapup', correct, isWrapup, answerMs, now, scheduler })
       : await recordAnswer(db, { userId: req.userId, session, cardId, rating, mode, isWrapup, answerMs, now, scheduler });
     const next = await nextForSession(db, req.userId, session, new Date(), scheduler, { ending });
     res.json({ result, next });

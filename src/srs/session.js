@@ -52,6 +52,16 @@ export function nextStep(session, now, config = SRS_CONFIG) {
   return { step: 'wrapup', cardId, waitMs: cardId === lastShown ? config.wrapUpWaitSeconds * 1000 : 0 };
 }
 
+// The answers that score: the first answer to each card in the round. Wrap-up reviews and repeats don't count.
+export function firstAttempts(answers) {
+  const seen = new Set();
+  return answers.filter((a) => {
+    if (a.isWrapup || seen.has(a.cardId)) return false;
+    seen.add(a.cardId);
+    return true;
+  });
+}
+
 // Progress text for the play screen: "12 / 25", "3:41 left" (then "Time's up"), or "37 answered · 89%" for Endless.
 export function progressLabel(session, now) {
   const counted = session.answers.filter((a) => !a.isWrapup);
@@ -63,19 +73,23 @@ export function progressLabel(session, now) {
     const seconds = Math.ceil(left / 1000);
     return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} left`;
   }
-  const correct = counted.filter((a) => a.correct).length;
-  return `${counted.length} answered · ${counted.length ? Math.round((correct / counted.length) * 100) : 0}%`;
+  const scored = firstAttempts(session.answers);
+  const correct = scored.filter((a) => a.correct).length;
+  return `${scored.length} answered · ${scored.length ? Math.round((correct / scored.length) * 100) : 0}%`;
 }
 
 // End-of-session summary from this session's answers (with their log values, see review.js).
-// answers: [{ cardId, correct, mode, tierBefore, tierAfter, undone }]; undone = the transition was undone.
+// answers: [{ cardId, correct, mode, isWrapup, tierBefore, tierAfter, undone }]; undone = the transition was undone.
+// The score counts first attempts only: 10 questions with 3 wrong is 70%, however the wrap-up or a repeat goes.
 export function summarize(answers) {
-  const correct = answers.filter((a) => a.correct).length;
+  const scored = firstAttempts(answers);
+  const correct = scored.filter((a) => a.correct).length;
   const moved = (test) => [...new Set(answers.filter((a) => !a.undone && test(a)).map((a) => a.cardId))];
   const lastByCard = new Map(answers.map((a) => [a.cardId, a]));
   return {
-    answered: answers.length,
-    percentCorrect: answers.length ? Math.round((correct / answers.length) * 100) : 0,
+    answered: scored.length,
+    correct,
+    percentCorrect: scored.length ? Math.round((correct / scored.length) * 100) : 0,
     newLearned: new Set(answers.filter((a) => a.mode === 'new').map((a) => a.cardId)).size,
     banked: moved((a) => a.tierBefore === 'rotation' && a.tierAfter === 'bank'),
     mastered: moved((a) => a.tierBefore === 'bank' && a.tierAfter === 'mastered'),

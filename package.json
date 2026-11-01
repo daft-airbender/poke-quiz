@@ -17,7 +17,8 @@
     "create-user": "node --env-file=.env scripts/create-user.js",
     "create-user:prod": "node --env-file=.env.production scripts/create-user.js",
     "rebuild:snapshots": "node --env-file-if-exists=.env scripts/rebuild-snapshots.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:db": "node --env-file=.env --test"
   },
   "dependencies": {
     "bcrypt": "6.0.0",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "drizzle-kit": "0.31.11",
+    "jsdom": "26.1.0",
     "pngjs": "7.0.0"
   }
 }

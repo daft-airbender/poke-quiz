@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildCatalog } from '../src/srs/catalog.js';
 import { replayCard } from '../src/srs/replay.js';
-import { reviewCard } from '../src/srs/review.js';
+import { reviewCard, unscheduledLog } from '../src/srs/review.js';
 import { cardFromRow, rowFromCard } from '../src/srs/rows.js';
 import { createScheduler, newCardMemory, RATING } from '../src/srs/scheduler.js';
 import { manualTierChange, newTierFields, restoreTier } from '../src/srs/tiers.js';
@@ -76,6 +76,33 @@ test('Free Play answers never change a card, and an untouched card replays as un
   ];
   assert.equal(replayCard({ reviews: freePlayOnly, events: [] }, { scheduler }), null);
   assert.equal(replayCard({ reviews: [], events: [] }, { scheduler }), null);
+});
+
+test('wrap-up reviews never change a card, right or wrong', () => {
+  const t0 = new Date('2026-11-01T15:00:00Z');
+  const missed = reviewCard({ ...newTierFields(), memory: newCardMemory() }, RATING.again, t0, { scheduler });
+  const reviews = [{ reviewedAt: t0, rating: RATING.again, mode: 'new' }];
+  for (const [minutes, rating] of [[5, 3], [6, 1]]) {
+    reviews.push({ reviewedAt: new Date(+t0 + minutes * MINUTE), rating, mode: 'wrapup' });
+  }
+  assert.deepEqual(replayCard({ reviews, events: [] }, { scheduler }), missed.card);
+  // Wrap-up rows from before this rule did schedule, and kept their real mode: they still replay.
+  const legacy = [reviews[0], { reviewedAt: new Date(+t0 + 5 * MINUTE), rating: RATING.good, mode: 'due' }];
+  assert.notDeepEqual(replayCard({ reviews: legacy, events: [] }, { scheduler }), missed.card);
+});
+
+test('an unscheduled answer logs every "before" value equal to its "after" value', () => {
+  const now = new Date('2026-11-02T15:00:00Z');
+  const { card } = reviewCard({ ...newTierFields(), memory: newCardMemory() }, RATING.again, new Date('2026-11-01T15:00:00Z'), { scheduler });
+  for (const [correct, rating] of [[true, 3], [false, 1]]) {
+    const log = unscheduledLog(card, correct, now, { scheduler });
+    assert.equal(log.rating, rating);
+    assert.equal(log.stabilityAfter, log.stabilityBefore);
+    assert.equal(log.difficultyAfter, log.difficultyBefore);
+    assert.equal(+log.dueAfter, +log.dueBefore);
+    assert.equal(log.tierAfter, log.tierBefore);
+    assert.equal(log.stabilityBefore, card.memory.stability);
+  }
 });
 
 test('card_state rows round-trip without losing anything', () => {

@@ -4,17 +4,17 @@
 // Retrievability is computed in SQL (retrievabilitySql) so the database can rank thousands of cards and send back only
 // the few candidates each queue tier needs; the pure queue (src/srs/queue.js) then makes the final pick
 // with the exact library values.
-import { and, asc, desc, eq, gt, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, notInArray, sql } from 'drizzle-orm';
 import { getMode, listModes } from '../quiz/modes/index.js';
 import { questionForCard } from '../srs/catalog.js';
 import { SRS_CONFIG } from '../srs/config.js';
 import { addDays, dayKey } from '../srs/days.js';
 import { accuracyByType, shownThisPass } from '../srs/freePlay.js';
 import { inPlayScope, newCardsLeft, orderNewCards, pickNextCard, pickPracticeCard } from '../srs/queue.js';
-import { reviewCard } from '../srs/review.js';
+import { reviewCard, UNSCHEDULED_MODES, unscheduledLog } from '../srs/review.js';
 import { cardFromRow, rowFromCard, tierSnapshotFromJson } from '../srs/rows.js';
 import { newCardMemory } from '../srs/scheduler.js';
-import { nextStep, progressLabel, summarize, wrapUpCards } from '../srs/session.js';
+import { firstAttempts, nextStep, progressLabel, summarize, wrapUpCards } from '../srs/session.js';
 import { newTierFields } from '../srs/tiers.js';
 import { cardEvents, cards, cardState, dailyTierSnapshot, reviewLog, sessions, users } from './schema.js';
 
@@ -312,8 +312,7 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
   if (step.step === 'wrapup') {
     const card = await studiedCard(db, userId, step.cardId);
     if (!card) return { step: 'done', progress };
-    const mode = PRACTICE_TIER[session.kind] ? `${PRACTICE_TIER[session.kind]}_practice` : card.memory.due <= now ? 'due' : 'ahead';
-    picked = { card, mode };
+    picked = { card, mode: 'wrapup' };
     isWrapup = true;
     waitMs = step.waitMs;
   } else {
@@ -341,7 +340,6 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
 
   const { card, mode } = picked;
   const memory = card.memory ?? newCardMemory();
-  const preview = scheduler.preview(memory, now);
   const question = questionForCard(card.promptKey);
   return {
     step: 'question',
@@ -356,7 +354,8 @@ export async function nextForSession(db, userId, session, now, scheduler, { endi
       title: getMode(question.mode).describe(card.promptKey)?.title ?? '',
       question,
       // When the card would be due again after each rating (ISO), for "10m / 2d / 6d"; serverNow avoids clock skew.
-      preview: Object.fromEntries(Object.entries(preview).map(([rating, due]) => [rating, due.toISOString()])),
+      // Wrap-up cards aren't rated.
+      preview: isWrapup ? null : Object.fromEntries(Object.entries(scheduler.preview(memory, now)).map(([rating, due]) => [rating, due.toISOString()])),
       serverNow: now.toISOString(),
     },
     progress: { ...progress, ahead: mode === 'ahead' },
@@ -460,9 +459,10 @@ export async function recordAnswer(db, { userId, session, cardId, rating, mode, 
   });
 }
 
-// A Free Play answer: logged in review_log (mode 'free_play') with every FSRS and tier "before" value equal to
-// its "after" value, and nothing else changes: no card_state row, no tier or counter, no new-card count.
-export async function recordFreePlayAnswer(db, { userId, session, cardId, correct, isWrapup, answerMs, now, scheduler }) {
+// An answer that doesn't schedule (see UNSCHEDULED_MODES): a Free Play answer, or a wrap-up review of a missed card.
+// Logged in review_log with every FSRS and tier "before" value equal to its "after" value, and nothing else
+// changes: no card_state row, no tier or counter, no new-card count.
+export async function recordUnscheduledAnswer(db, { userId, session, cardId, mode, correct, isWrapup, answerMs, now, scheduler }) {
   const [card] = await db.select({ id: cards.id }).from(cards).where(and(eq(cards.id, cardId), eq(cards.active, true))).limit(1);
   if (!card) throw Object.assign(new Error('Unknown card'), { status: 400 });
   const [row] = await db
@@ -471,30 +471,9 @@ export async function recordFreePlayAnswer(db, { userId, session, cardId, correc
     .where(and(eq(cardState.userId, userId), eq(cardState.cardId, cardId)))
     .limit(1);
   const current = row ? cardFromRow(row) : { ...newTierFields(), memory: newCardMemory() };
-  const { memory } = current;
   const [log] = await db
     .insert(reviewLog)
-    .values({
-      userId,
-      cardId,
-      sessionId: session.id,
-      reviewedAt: now,
-      rating: correct ? 3 : 1,
-      mode: 'free_play',
-      fsrsStateBefore: memory.state,
-      stabilityBefore: memory.stability,
-      stabilityAfter: memory.stability,
-      difficultyBefore: memory.difficulty,
-      difficultyAfter: memory.difficulty,
-      retrievabilityAtReview: scheduler.retrievability(memory, now),
-      dueBefore: memory.due,
-      dueAfter: memory.due,
-      tierBefore: current.tier,
-      tierAfter: current.tier,
-      bankCounterAfter: current.bankCorrectDays,
-      isWrapup,
-      answerMs,
-    })
+    .values({ userId, cardId, sessionId: session.id, mode, isWrapup, answerMs, ...unscheduledLog(current, correct, now, { scheduler }) })
     .returning({ id: reviewLog.id });
   return { logId: log.id, correct, transition: null, undo: null };
 }
@@ -525,7 +504,7 @@ export async function undoTransition(db, { userId, cardId, logId, undo, now }) {
     const [latest] = await tx
       .select({ id: reviewLog.id, tierBefore: reviewLog.tierBefore, tierAfter: reviewLog.tierAfter })
       .from(reviewLog)
-      .where(and(eq(reviewLog.userId, userId), eq(reviewLog.cardId, cardId), sql`${reviewLog.mode} <> 'free_play'`))
+      .where(and(eq(reviewLog.userId, userId), eq(reviewLog.cardId, cardId), notInArray(reviewLog.mode, UNSCHEDULED_MODES)))
       .orderBy(desc(reviewLog.id))
       .limit(1);
     const [row] = await tx
@@ -584,7 +563,7 @@ export async function sessionSummary(db, userId, session) {
     return undos.some((u) => u.cardId === answer.cardId && u.at >= answer.at && (!next || u.at < next.at));
   };
   const summary = summarize(
-    answers.map((a, i) => ({ cardId: a.cardId, correct: a.rating > 1, mode: a.mode, tierBefore: a.tierBefore, tierAfter: a.tierAfter, undone: undone(a, i) })),
+    answers.map((a, i) => ({ cardId: a.cardId, correct: a.rating > 1, mode: a.mode, isWrapup: a.isWrapup, tierBefore: a.tierBefore, tierAfter: a.tierAfter, undone: undone(a, i) })),
   );
   const info = new Map(cardRows.map((c) => [c.id, { cardId: c.id, cardType: c.cardType, title: c.payload.title, sprite: c.payload.sprite ?? null }]));
   const describe = (ids) => ids.map((id) => info.get(id)).filter(Boolean);
@@ -592,6 +571,7 @@ export async function sessionSummary(db, userId, session) {
     kind: session.kind,
     length: lengthOf(session),
     answered: summary.answered,
+    correct: summary.correct,
     percentCorrect: summary.percentCorrect,
     newLearned: summary.newLearned,
     banked: describe(summary.banked),
@@ -600,7 +580,7 @@ export async function sessionSummary(db, userId, session) {
     missed: describe(summary.missed),
     // Free Play: accuracy by mode for this session (spec: "Free Play summary").
     ...(session.kind === 'free_play' && {
-      byType: accuracyByType(answers.map((a) => ({ cardType: info.get(a.cardId)?.cardType, correct: a.rating > 1 }))).map((row) => ({
+      byType: accuracyByType(firstAttempts(answers).map((a) => ({ cardType: info.get(a.cardId)?.cardType, correct: a.rating > 1 }))).map((row) => ({
         ...row,
         label: MODE_LABELS.get(row.cardType) ?? row.cardType,
       })),

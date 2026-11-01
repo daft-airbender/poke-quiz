@@ -2,17 +2,17 @@
 // and undos), applied in time order with the same rules used live. Used to check that card_state can always
 // be reproduced from the logs, and to repair it if not. Pure.
 import { SRS_CONFIG } from './config.js';
-import { reviewCard } from './review.js';
+import { reviewCard, UNSCHEDULED_MODES } from './review.js';
 import { tierSnapshotFromJson } from './rows.js';
 import { newCardMemory } from './scheduler.js';
 import { manualTierChange, newTierFields, restoreTier } from './tiers.js';
 
-// reviews: [{ reviewedAt, rating, mode }] (Free Play rows are skipped: they never change scheduling)
+// reviews: [{ reviewedAt, rating, mode }] (Free Play and wrap-up rows are skipped: they never change scheduling)
 // events:  [{ at, action, undoTo }]
 // Returns the card, or null if nothing in the history touched it (still unseen).
 export function replayCard({ reviews, events }, { scheduler, config = SRS_CONFIG }) {
   const history = [
-    ...reviews.filter((r) => r.mode !== 'free_play').map((r) => ({ at: r.reviewedAt, kind: 0, review: r })),
+    ...reviews.filter((r) => !UNSCHEDULED_MODES.includes(r.mode)).map((r) => ({ at: r.reviewedAt, kind: 0, review: r })),
     ...events.map((e) => ({ at: e.at, kind: 1, event: e })),
   ];
   // Time order; on a tie, the answer comes before the action that followed it (e.g. its Undo).
